@@ -1,4 +1,5 @@
-// Prisma Schema for Salon & Nail Studio Management System
+// Salon Studio database. Money is stored in rupees, dates as "YYYY-MM-DD", times as "HH:mm".
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,486 +9,237 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Authentication & Users ────────────────────────────────────────
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String // Owner | Manager | Receptionist | Stylist
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+// Single row (id = 1) holding the business profile.
+model Settings {
+  id             Int    @id @default(1)
   name           String
-  passwordHash   String
-  phone          String?
-  avatar         String?
-  roleId         String
-  isActive       Boolean   @default(true)
-  lastLoginAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  role           Role      @relation(fields: [roleId], references: [id])
-  auditLogs      AuditLog[]
-
-  @@index([email])
-  @@index([roleId])
+  address        String @default("")
+  phone          String @default("")
+  email          String @default("")
+  gstin          String @default("")
+  openTime       String @default("09:00")
+  closeTime      String @default("21:00")
+  invoicePrefix  String @default("INV")
+  nextInvoiceNo  Int    @default(1001)
+  defaultTaxRate Float  @default(18)
+  invoiceFooter  String @default("Thank you for visiting us.")
 }
 
-model Role {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  description String?
-  isSystem    Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  users       User[]
-  permissions RolePermission[]
+model Branch {
+  id           String        @id @default(cuid())
+  name         String
+  address      String        @default("")
+  active       Boolean       @default(true)
+  appointments Appointment[]
+  invoices     Invoice[]
+  expenses     Expense[]
 }
 
-model Permission {
-  id          String       @id @default(cuid())
-  module      String       // e.g., "appointments", "billing", "staff"
-  action      String       // e.g., "create", "read", "update", "delete"
-  description String?
-
-  roles       RolePermission[]
-
-  @@unique([module, action])
-}
-
-model RolePermission {
-  id           String     @id @default(cuid())
-  roleId       String
-  permissionId String
-  granted      Boolean    @default(true)
-
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([roleId, permissionId])
-}
-
-// ─── Salon Settings ────────────────────────────────────────────────
-model SalonSettings {
-  id              String   @id @default(cuid())
-  name            String   @default("My Salon")
-  logo            String?
-  address         String?
-  city            String?
-  state           String?
-  zipCode         String?
-  country         String   @default("India")
-  phone           String?
-  email           String?
-  website         String?
-  gstin           String?
-  panNumber       String?
-  currency        String   @default("INR")
-  currencySymbol  String   @default("₹")
-  timeZone        String   @default("Asia/Kolkata")
-  openTime        String   @default("09:00")
-  closeTime       String   @default("21:00")
-  slotDuration    Int      @default(30) // minutes
-  invoicePrefix   String   @default("INV")
-  invoiceNextNum  Int      @default(1001)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  taxSettings     TaxSetting[]
-}
-
-model TaxSetting {
-  id              String        @id @default(cuid())
-  name            String        // e.g., "GST 18%", "CGST", "SGST"
-  rate            Float         // percentage
-  isActive        Boolean       @default(true)
-  isDefault       Boolean       @default(false)
-  salonSettingsId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  salonSettings   SalonSettings @relation(fields: [salonSettingsId], references: [id])
-  services        Service[]
-  invoiceItems    InvoiceItem[]
-}
-
-// ─── Customers ─────────────────────────────────────────────────────
 model Customer {
-  id                String       @id @default(cuid())
-  name              String
-  phone             String       @unique
-  email             String?
-  gender            String?      // Male, Female, Other
-  dateOfBirth       DateTime?
-  address           String?
-  notes             String?
-  hairPreferences   String?
-  nailPreferences   String?
-  treatmentHistory  String?
-  preferredStaffId  String?
-  isActive          Boolean      @default(true)
-  totalSpent        Float        @default(0)
-  visitCount        Int          @default(0)
-  lastVisitAt       DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id               String        @id @default(cuid())
+  name             String
+  phone            String        @unique
+  email            String?
+  gender           String?
+  birthday         String?
+  address          String?
+  notes            String?
+  hairNotes        String?
+  nailNotes        String?
+  preferredStaffId String?
+  active           Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  preferredStaff   Staff?        @relation(fields: [preferredStaffId], references: [id])
+  appointments     Appointment[]
+  invoices         Invoice[]
 
-  preferredStaff    Staff?       @relation("PreferredStaff", fields: [preferredStaffId], references: [id])
-  appointments      Appointment[]
-  invoices          Invoice[]
-
-  @@index([phone])
   @@index([name])
 }
 
-// ─── Staff ─────────────────────────────────────────────────────────
 model Staff {
-  id                String       @id @default(cuid())
-  name              String
-  phone             String       @unique
-  email             String?
-  gender            String?
-  role              String       @default("Stylist") // Stylist, Nail Tech, Manager, etc.
-  specializations   String?      // JSON string of specializations
-  avatar            String?
-  commissionRate    Float        @default(0) // percentage
-  isActive          Boolean      @default(true)
-  joinDate          DateTime     @default(now())
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  availability      StaffAvailability[]
-  leaves            StaffLeave[]
-  appointments      Appointment[]
-  appointmentServices AppointmentService[]
-  preferredByCustomers Customer[] @relation("PreferredStaff")
-  services          StaffService[]
-
-  @@index([phone])
-  @@index([name])
+  id             String               @id @default(cuid())
+  name           String
+  phone          String               @unique
+  email          String?
+  title          String               @default("Stylist")
+  skills         String               @default("") // comma separated
+  commissionRate Float                @default(0)
+  workDays       String               @default("1,2,3,4,5,6") // 0 = Sunday
+  startTime      String               @default("09:00")
+  endTime        String               @default("20:00")
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  appointments   Appointment[]
+  preferredBy    Customer[]
+  invoiceItems   InvoiceItem[]
 }
 
-model StaffAvailability {
-  id         String  @id @default(cuid())
-  staffId    String
-  dayOfWeek  Int     // 0=Sunday, 1=Monday, ..., 6=Saturday
-  startTime  String  // "09:00"
-  endTime    String  // "18:00"
-  isOff      Boolean @default(false)
-
-  staff      Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
-
-  @@unique([staffId, dayOfWeek])
-}
-
-model StaffLeave {
-  id        String   @id @default(cuid())
-  staffId   String
-  startDate DateTime
-  endDate   DateTime
-  reason    String?
-  status    String   @default("Approved") // Pending, Approved, Rejected
-  createdAt DateTime @default(now())
-
-  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
-
-  @@index([staffId])
-  @@index([startDate, endDate])
-}
-
-// ─── Services ──────────────────────────────────────────────────────
 model ServiceCategory {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  description String?
-  sortOrder   Int       @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  services    Service[]
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  services  Service[]
 }
 
 model Service {
-  id           String          @id @default(cuid())
-  name         String
-  description  String?
-  categoryId   String
-  price        Float
-  duration     Int             // minutes
-  taxSettingId String?
-  isActive     Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-
-  category     ServiceCategory @relation(fields: [categoryId], references: [id])
-  taxSetting   TaxSetting?     @relation(fields: [taxSettingId], references: [id])
-  staffServices StaffService[]
-  appointmentServices AppointmentService[]
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  categoryId  String
+  price       Float
+  duration    Int // minutes
+  taxRate     Float                @default(18)
+  active      Boolean              @default(true)
+  category    ServiceCategory      @relation(fields: [categoryId], references: [id])
+  bookings    AppointmentService[]
   invoiceItems InvoiceItem[]
-
-  @@index([categoryId])
-  @@index([name])
 }
 
-model StaffService {
-  id       String @id @default(cuid())
-  staffId  String
-  serviceId String
-
-  staff    Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  service  Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  @@unique([staffId, serviceId])
-}
-
-// ─── Appointments ──────────────────────────────────────────────────
 model Appointment {
-  id          String   @id @default(cuid())
-  customerId  String
-  staffId     String
-  date        DateTime
-  startTime   String   // "10:00"
-  endTime     String   // "11:30"
-  totalDuration Int    // calculated from services
-  status      String   @default("Confirmed") // Confirmed, CheckedIn, InProgress, Completed, Cancelled, NoShow
-  notes       String?
-  isWalkIn    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  customer    Customer @relation(fields: [customerId], references: [id])
-  staff       Staff    @relation(fields: [staffId], references: [id])
-  services    AppointmentService[]
-  invoice     Invoice?
+  id        String               @id @default(cuid())
+  customerId String
+  staffId   String
+  branchId  String?
+  date      String
+  startTime String
+  endTime   String
+  status    String               @default("Booked") // Booked | CheckedIn | InService | Completed | Cancelled | NoShow
+  walkIn    Boolean              @default(false)
+  notes     String?
+  createdAt DateTime             @default(now())
+  customer  Customer             @relation(fields: [customerId], references: [id])
+  staff     Staff                @relation(fields: [staffId], references: [id])
+  branch    Branch?              @relation(fields: [branchId], references: [id])
+  services  AppointmentService[]
+  invoice   Invoice?
 
   @@index([date])
   @@index([staffId, date])
-  @@index([customerId])
-  @@index([status])
 }
 
 model AppointmentService {
-  id            String  @id @default(cuid())
+  id            String      @id @default(cuid())
   appointmentId String
   serviceId     String
-  staffId       String?
+  name          String
   price         Float
   duration      Int
-
   appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   service       Service     @relation(fields: [serviceId], references: [id])
-  staff         Staff?      @relation(fields: [staffId], references: [id])
-}
-
-// ─── Products & Inventory ──────────────────────────────────────────
-model ProductCategory {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  products    Product[]
 }
 
 model Product {
-  id              String          @id @default(cuid())
-  name            String
-  description     String?
-  categoryId      String
-  sku             String?         @unique
-  barcode         String?
-  purchasePrice   Float           @default(0)
-  sellingPrice    Float
-  stock           Int             @default(0)
-  minStockLevel   Int             @default(5)
-  unit            String          @default("pcs")
-  isActive        Boolean         @default(true)
-  supplierId      String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-
-  category        ProductCategory @relation(fields: [categoryId], references: [id])
-  supplier        Supplier?       @relation(fields: [supplierId], references: [id])
-  inventoryLogs   InventoryTransaction[]
-  invoiceItems    InvoiceItem[]
-
-  @@index([categoryId])
-  @@index([name])
-  @@index([sku])
+  id           String          @id @default(cuid())
+  name         String
+  sku          String?         @unique
+  category     String          @default("General")
+  supplier     String?
+  costPrice    Float           @default(0)
+  price        Float
+  taxRate      Float           @default(18)
+  stock        Int             @default(0)
+  reorderLevel Int             @default(5)
+  unit         String          @default("pcs")
+  active       Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  movements    StockMovement[]
+  invoiceItems InvoiceItem[]
 }
 
-model Supplier {
-  id          String    @id @default(cuid())
-  name        String
-  contactName String?
-  phone       String?
-  email       String?
-  address     String?
-  notes       String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  products    Product[]
-  purchases   Purchase[]
-}
-
-model InventoryTransaction {
-  id            String   @id @default(cuid())
-  productId     String
-  type          String   // "IN", "OUT", "ADJUSTMENT"
-  quantity      Int
-  previousStock Int
-  newStock      Int
-  reason        String?  // "Sale", "Purchase", "Damage", "Return", "Adjustment"
-  referenceId   String?  // Invoice ID or Purchase ID
-  createdAt     DateTime @default(now())
-
-  product       Product  @relation(fields: [productId], references: [id])
-
-  @@index([productId])
-  @@index([createdAt])
-}
-
-model Purchase {
-  id            String   @id @default(cuid())
-  supplierId    String
-  invoiceNumber String?
-  totalAmount   Float
-  paidAmount    Float    @default(0)
-  status        String   @default("Pending") // Pending, Partial, Paid
-  purchaseDate  DateTime @default(now())
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  supplier      Supplier @relation(fields: [supplierId], references: [id])
-
-  @@index([supplierId])
-  @@index([purchaseDate])
-}
-
-// ─── Branches ─────────────────────────────────────────────────────
-model Branch {
+model StockMovement {
   id        String   @id @default(cuid())
-  name      String
-  address   String
-  invoices  Invoice[]
+  productId String
+  type      String // IN | OUT | ADJUST | SALE | RETURN
+  change    Int // signed
+  balance   Int
+  note      String?
+  invoiceId String?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId, createdAt])
 }
 
-// ─── Invoices & Payments ───────────────────────────────────────────
 model Invoice {
-  id              String   @id @default(cuid())
-  invoiceNumber   String   @unique
-  customerId      String
-  appointmentId   String?  @unique
-  subtotal        Float
-  discountType    String?  // "percentage" or "fixed"
-  discountValue   Float    @default(0)
-  discountAmount  Float    @default(0)
-  taxAmount       Float    @default(0)
-  totalAmount     Float
-  paidAmount      Float    @default(0)
-  balanceAmount   Float    @default(0)
-  status          String   @default("Unpaid") // Unpaid, PartiallyPaid, Paid, Cancelled, Refunded
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String        @id @default(cuid())
+  number        String        @unique
+  customerId    String
+  appointmentId String?       @unique
+  branchId      String?
+  subtotal      Float
+  discountType  String? // percent | amount
+  discountValue Float         @default(0)
+  discount      Float         @default(0)
+  tax           Float         @default(0)
+  total         Float
+  paid          Float         @default(0)
+  status        String // Paid | Partial | Unpaid | Void
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime      @default(now())
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id])
+  branch        Branch?       @relation(fields: [branchId], references: [id])
+  items         InvoiceItem[]
+  payments      Payment[]
 
-  customer        Customer    @relation(fields: [customerId], references: [id])
-  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
-  branchId        String? 
-  branch          Branch? @relation(fields: [branchId], references: [id])
-  items           InvoiceItem[]
-  payments        Payment[]
-
-  @@index([customerId])
-  @@index([status])
   @@index([createdAt])
-  @@index([invoiceNumber])
+  @@index([customerId])
 }
 
 model InvoiceItem {
-  id           String      @id @default(cuid())
-  invoiceId    String
-  type         String      // "service" or "product"
-  serviceId    String?
-  productId    String?
-  taxSettingId String?
-  name         String
-  quantity     Int         @default(1)
-  unitPrice    Float
-  taxRate      Float       @default(0)
-  taxAmount    Float       @default(0)
-  totalPrice   Float
-  createdAt    DateTime    @default(now())
-
-  invoice      Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  service      Service?    @relation(fields: [serviceId], references: [id])
-  product      Product?    @relation(fields: [productId], references: [id])
-  taxSetting   TaxSetting? @relation(fields: [taxSettingId], references: [id])
+  id        String   @id @default(cuid())
+  invoiceId String
+  kind      String // service | product
+  serviceId String?
+  productId String?
+  staffId   String?
+  name      String
+  qty       Int
+  unitPrice Float
+  taxRate   Float
+  discount  Float    @default(0)
+  tax       Float    @default(0)
+  total     Float // after discount, including tax
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  service   Service? @relation(fields: [serviceId], references: [id])
+  product   Product? @relation(fields: [productId], references: [id])
+  staff     Staff?   @relation(fields: [staffId], references: [id])
 }
 
 model Payment {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  amount      Float
-  method      String   // "Cash", "UPI", "Card", "Other"
-  reference   String?  // Transaction reference
-  notes       String?
-  isAdvance   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  invoiceId String
+  amount    Float
+  method    String // Cash | UPI | Card | Bank
+  reference String?
+  createdAt DateTime @default(now())
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([invoiceId])
   @@index([createdAt])
-  @@index([method])
-}
-
-// ─── Expenses ──────────────────────────────────────────────────────
-model ExpenseCategory {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  expenses    Expense[]
 }
 
 model Expense {
-  id              String          @id @default(cuid())
-  categoryId      String
-  amount          Float
-  description     String?
-  expenseDate     DateTime        @default(now())
-  paymentMethod   String          @default("Cash")
-  vendor          String?
-  notes           String?
-  receiptUrl      String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id          String   @id @default(cuid())
+  date        String
+  category    String
+  description String
+  amount      Float
+  method      String   @default("Cash")
+  vendor      String?
+  branchId    String?
+  createdAt   DateTime @default(now())
+  branch      Branch?  @relation(fields: [branchId], references: [id])
 
-  category        ExpenseCategory @relation(fields: [categoryId], references: [id])
-
-  @@index([categoryId])
-  @@index([expenseDate])
-}
-
-// ─── Audit Logs ────────────────────────────────────────────────────
-model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  action     String   // "CREATE", "UPDATE", "DELETE"
-  module     String   // "appointment", "invoice", "customer", etc.
-  recordId   String?
-  details    String?  // JSON string of changes
-  ipAddress  String?
-  createdAt  DateTime @default(now())
-
-  user       User?    @relation(fields: [userId], references: [id])
-
-  @@index([module])
-  @@index([createdAt])
-  @@index([userId])
+  @@index([date])
 }

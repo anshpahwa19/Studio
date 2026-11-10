@@ -2,31 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @layer base {
-  body {
-    @apply bg-surface-50 text-gray-900 font-sans antialiased;
-  }
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-canvas text-ink font-sans text-[14px]; }
+  h1, h2, h3 { text-wrap: balance; }
+  :focus-visible { @apply outline-none ring-2 ring-plum-500/40 ring-offset-1; }
+  .tabular { font-variant-numeric: tabular-nums; }
 }
 
 @layer components {
-  .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+  .input {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink placeholder:text-ink-mute/70
+      focus:border-plum-500 focus:outline-none focus:ring-2 focus:ring-plum-500/20 disabled:bg-canvas disabled:text-ink-mute;
   }
-  .btn-primary {
-    @apply bg-primary-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-  .btn-secondary {
-    @apply bg-white text-gray-700 px-4 py-2 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors duration-200;
-  }
-  .btn-danger {
-    @apply bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors duration-200;
-  }
-  .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
-  }
-  .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
-  }
+  .label { @apply mb-1 block text-[12px] font-medium text-ink-soft; }
+  .card { @apply rounded-xl border border-line bg-white; }
+  .table { @apply w-full text-left text-[13.5px]; }
+  .table th { @apply border-b border-line bg-canvas/60 px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-wide text-ink-mute; }
+  .table td { @apply border-b border-line/70 px-4 py-3 align-middle; }
+  .table tr:last-child td { @apply border-b-0; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .print-sheet { border: 0 !important; box-shadow: none !important; margin: 0 !important; max-width: none !important; }
 }
