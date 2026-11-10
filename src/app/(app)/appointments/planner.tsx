@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ApptStatus, Button, Card, Empty, Field, Input, PageHeader, Select, Textarea, apptLabel, cx } from '@/components/ui';
 import { Modal } from '@/components/modal';
@@ -10,6 +10,7 @@ import { toast } from '@/components/toast';
 import { addDays, dayOfWeek, fmtDate, fmtDuration, fmtTime, fromMinutes, isoDate, money0, toMinutes, weekStart } from '@/lib/format';
 import { bookAppointment, rescheduleAppointment, setAppointmentStatus } from './actions';
 import { saveCustomer } from '../customers/actions';
+import { ClientCombobox } from '@/components/client-combobox';
 
 type Appt = {
   id: string; date: string; startTime: string; endTime: string; status: string; walkIn: boolean; notes: string | null; staffId: string;
@@ -73,7 +74,7 @@ export function Planner(p: Props) {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center rounded-lg border border-line bg-white">
           <button type="button" aria-label="Previous" onClick={() => go(addDays(p.date, -step))} className="px-2 py-2 hover:bg-canvas"><ChevronLeft size={16} /></button>
-          <button type="button" onClick={() => go(today)} className={cx('border-x border-line px-3 py-1.5 text-[13px] font-medium hover:bg-canvas', p.date === today && 'text-plum-600')}>Today</button>
+          <button type="button" onClick={() => go(today)} className={cx('border-x border-line px-3 py-1.5 text-[13px] font-medium hover:bg-canvas', p.date === today && 'text-violet-600')}>Today</button>
           <button type="button" aria-label="Next" onClick={() => go(addDays(p.date, step))} className="px-2 py-2 hover:bg-canvas"><ChevronRight size={16} /></button>
         </div>
         <Input type="date" value={p.date} onChange={(e) => e.target.value && go(e.target.value)} className="w-auto" aria-label="Go to date" />
@@ -234,7 +235,7 @@ function AppointmentDetail({ appt, onClose, staff, editable, canBill }: Props & 
         <div className="flex flex-wrap items-center gap-2">
           <ApptStatus status={appt.status} />
           {appt.walkIn && <span className="text-[12px] text-ink-mute">Walk-in</span>}
-          <Link href={`/customers/${appt.customer.id}`} className="ml-auto text-[13px] font-medium text-plum-600 hover:underline">Client profile</Link>
+          <Link href={`/customers/${appt.customer.id}`} className="ml-auto text-[13px] font-medium text-violet-600 hover:underline">Client profile</Link>
         </div>
         <dl className="grid grid-cols-2 gap-3 text-[13.5px]">
           <div><dt className="text-ink-mute">When</dt><dd className="font-medium">{fmtDate(appt.date, { weekday: 'short', day: 'numeric', month: 'short' })}, {fmtTime(appt.startTime)} – {fmtTime(appt.endTime)}</dd></div>
@@ -284,16 +285,9 @@ function AppointmentDetail({ appt, onClose, staff, editable, canBill }: Props & 
 function BookingForm({ initial, services, customers, staff, branches, onDone }: Props & { initial: Draft; onDone: (date?: string) => void }) {
   const [d, setD] = useState(initial);
   const [newClient, setNewClient] = useState<{ name: string; phone: string } | null>(null);
-  const [q, setQ] = useState('');
   const [svcQ, setSvcQ] = useState('');
   const { run, pending } = useAction();
 
-  const customer = customers.find((c) => c.id === d.customerId);
-  const matches = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return [];
-    return customers.filter((c) => c.name.toLowerCase().includes(t) || c.phone.replace(/\s/g, '').includes(t.replace(/\s/g, ''))).slice(0, 6);
-  }, [q, customers]);
   const chosen = d.serviceIds.map((id) => services.find((s) => s.id === id)!).filter(Boolean);
   const duration = chosen.reduce((a, s) => a + s.duration, 0);
   const price = chosen.reduce((a, s) => a + s.price, 0);
@@ -318,39 +312,18 @@ function BookingForm({ initial, services, customers, staff, branches, onDone }: 
         <div>
           <span className="label">Client</span>
           {newClient ? (
-            <div className="grid grid-cols-2 gap-2 rounded-lg border border-line p-3">
-              <Input placeholder="Full name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} required aria-label="New client name" />
-              <Input placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} required aria-label="New client mobile" />
-              <button type="button" onClick={() => setNewClient(null)} className="col-span-2 text-left text-[12.5px] text-plum-600 hover:underline">Choose an existing client instead</button>
-            </div>
-          ) : customer ? (
-            <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2">
-              <div><div className="font-medium">{customer.name}</div><div className="text-[12.5px] text-ink-mute">{customer.phone}</div></div>
-              <Button size="sm" variant="ghost" onClick={() => setD({ ...d, customerId: '' })}>Change</Button>
+            <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4">
+              <div className="mb-3 text-[13.5px] font-semibold text-violet-700">New client · saved with the booking</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Full name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} required aria-label="New client name" autoFocus />
+                <Input placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} required aria-label="New client mobile" />
+              </div>
+              <button type="button" onClick={() => setNewClient(null)} className="mt-3 text-[13px] font-medium text-violet-700 hover:underline">Choose an existing client instead</button>
             </div>
           ) : (
-            <div className="relative">
-              <Input autoFocus placeholder="Search name or mobile" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search clients" />
-              {q && (
-                <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-line bg-white shadow-lg">
-                  {matches.map((c) => (
-                    <li key={c.id}>
-                      <button type="button" className="w-full px-3 py-2 text-left hover:bg-canvas"
-                        onClick={() => { setD({ ...d, customerId: c.id, staffId: c.preferredStaffId && staff.some((s) => s.id === c.preferredStaffId) ? c.preferredStaffId : d.staffId }); setQ(''); }}>
-                        <span className="font-medium">{c.name}</span> <span className="text-ink-mute">{c.phone}</span>
-                      </button>
-                    </li>
-                  ))}
-                  <li>
-                    <button type="button" className="w-full border-t border-line px-3 py-2 text-left font-medium text-plum-600 hover:bg-canvas"
-                      onClick={() => { const digits = /\d{4,}/.test(q); setNewClient({ name: digits ? '' : q, phone: digits ? q : '' }); setQ(''); }}>
-                      + Add &quot;{q}&quot; as a new client
-                    </button>
-                  </li>
-                </ul>
-              )}
-              {!q && <button type="button" onClick={() => setNewClient({ name: '', phone: '' })} className="mt-1 text-[12.5px] text-plum-600 hover:underline">New client</button>}
-            </div>
+            <ClientCombobox id="book-client" clients={customers} value={d.customerId}
+              onChange={(id) => { const c = customers.find((x) => x.id === id); setD({ ...d, customerId: id, staffId: c?.preferredStaffId && staff.some((s) => s.id === c.preferredStaffId) ? c.preferredStaffId : d.staffId }); }}
+              onNew={(text) => { const digits = /\d{4,}/.test(text); setNewClient({ name: digits ? '' : text, phone: digits ? text : '' }); }} />
           )}
         </div>
         <div className="grid grid-cols-2 gap-3">

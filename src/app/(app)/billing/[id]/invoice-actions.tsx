@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Printer } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
+import { toast } from '@/components/toast';
 import { Button, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
@@ -8,7 +9,25 @@ import { money, round2 } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
 import { addPayment, voidInvoice } from '../actions';
 
-export function InvoiceActions({ id, due, isVoid, canVoid }: { id: string; due: number; isVoid: boolean; canVoid: boolean }) {
+/** Renders the A4 sheet to a PDF file named after the bill, splitting onto more pages if it runs long. */
+async function downloadPdf(number: string) {
+  const sheet = document.getElementById('invoice-sheet');
+  if (!sheet) return;
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+  const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const pageW = 210, pageH = 297;
+  const imgH = (canvas.height * pageW) / canvas.width;
+  const img = canvas.toDataURL('image/jpeg', 0.95);
+  for (let y = 0, page = 0; y < imgH - 0.5; y += pageH, page++) {
+    if (page) pdf.addPage();
+    pdf.addImage(img, 'JPEG', 0, -y, pageW, imgH);
+  }
+  pdf.save(`${number}.pdf`);
+}
+
+export function InvoiceActions({ id, number, due, isVoid, canVoid }: { id: string; number: string; due: number; isVoid: boolean; canVoid: boolean }) {
+  const [busy, setBusy] = useState(false);
   const [pay, setPay] = useState<{ amount: string; method: (typeof PAYMENT_METHODS)[number]; reference: string } | null>(null);
   const [reason, setReason] = useState<string | null>(null);
   const { run, pending } = useAction();
@@ -16,7 +35,12 @@ export function InvoiceActions({ id, due, isVoid, canVoid }: { id: string; due: 
   return (
     <div className="flex flex-wrap gap-2">
       {due > 0.005 && <Button onClick={() => setPay({ amount: String(round2(due)), method: 'UPI', reference: '' })}>Take payment</Button>}
-      <Button variant="secondary" onClick={() => window.print()}><Printer size={15} />Print or save PDF</Button>
+      <Button variant="secondary" onClick={() => window.print()}><Printer size={16} />Print</Button>
+      <Button variant="secondary" disabled={busy} onClick={async () => {
+        setBusy(true);
+        try { await downloadPdf(number); } catch { toast.error('Could not create the PDF. Try Print and choose Save as PDF instead.'); }
+        setBusy(false);
+      }}><Download size={16} />{busy ? 'Preparing PDF…' : 'Download PDF'}</Button>
       {canVoid && !isVoid && <Button variant="danger" onClick={() => setReason('')}>Void bill</Button>}
 
       <Modal open={!!pay} onClose={() => setPay(null)} title={`Take payment · ${money(due)} due`}>

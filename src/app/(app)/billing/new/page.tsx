@@ -7,8 +7,8 @@ export default async function NewBillPage({ searchParams }: { searchParams: { cu
   await requirePage('billing');
   const [customers, services, products, staff, branches, settings] = await Promise.all([
     db.customer.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, phone: true } }),
-    db.service.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, price: true } }),
-    db.product.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, price: true, stock: true, sku: true } }),
+    db.service.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, price: true, duration: true, category: { select: { name: true } } } }),
+    db.product.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, price: true, stock: true, sku: true, category: true, unit: true } }),
     db.staff.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     db.settings.findUniqueOrThrow({ where: { id: 1 }, select: { gstRate: true } }),
@@ -34,7 +34,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { cu
   return (
     <>
       <PageHeader title="Point of Sale (POS) Counter" subtitle={appointment ? 'Billing a completed appointment. Services are filled in from the booking.' : `Prices are before GST. GST at ${settings.gstRate}% is added after any discount, or turn it off for this bill.`} />
-      <PosForm gstRate={settings.gstRate} customers={customers} services={services} products={products} staff={staff} branches={branches}
+      <PosForm gstRate={settings.gstRate} customers={customers} services={services.map((s) => ({ ...s, category: s.category.name }))} products={products} staff={staff} branches={branches}
         initial={{ customerId, branchId, lines, appointmentId: appointment?.id ?? null }} />
     </>
   );
