@@ -1,27 +1,17 @@
-const { createServer } = require('http');
-const { parse } = require('url');
+// Runs inside an Electron utility process. Starts the built app on a free local port.
+const http = require('http');
 const path = require('path');
-const fs = require('fs');
-
-// Ensure database URL is pointing to persistent user data if provided
-const port = process.env.PORT || 3456;
-const appDir = path.join(__dirname, '..');
-
 const next = require('next');
-const app = next({ dev: false, dir: appDir });
+
+const app = next({ dev: false, dir: path.join(__dirname, '..') });
 const handle = app.getRequestHandler();
 
-app.prepare().then(() => {
-  const server = createServer((req, res) => {
-    const parsedUrl = parse(req.url, true);
-    handle(req, res, parsedUrl);
+app.prepare()
+  .then(() => {
+    const srv = http.createServer((req, res) => handle(req, res));
+    srv.listen(0, '127.0.0.1', () => process.parentPort.postMessage({ port: srv.address().port }));
+  })
+  .catch((err) => {
+    process.parentPort.postMessage({ error: err.message });
+    process.exit(1);
   });
-
-  server.listen(port, '127.0.0.1', (err) => {
-    if (err) throw err;
-    console.log(`> Shruti Pahwa Luxury Salon Offline Server running at http://127.0.0.1:${port}`);
-  });
-}).catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});

@@ -1,151 +1,79 @@
-const { app, BrowserWindow, dialog } = require('electron');
-const path = require('path');
+// Desktop shell: runs the app's server in the background and shows it in a window.
+// Data lives in the user's Application Support folder, so app updates never touch it.
+const { app, BrowserWindow, dialog, shell, utilityProcess } = require('electron');
+const crypto = require('crypto');
 const fs = require('fs');
-const http = require('http');
-const { fork } = require('child_process');
+const path = require('path');
 
-let mainWindow = null;
-let serverProcess = null;
-const PORT = 3456;
+const ROOT = path.join(__dirname, '..');
+// Same data folder whether run from source or installed: ~/Library/Application Support/Salon Studio
+app.setName('Salon Studio');
+app.setPath('userData', path.join(app.getPath('appData'), 'Salon Studio'));
+let server = null;
+let win = null;
 
-// 1. Prepare persistent writable SQLite database in userData
-function setupDatabase() {
-  const userDataDir = app.getPath('userData');
-  if (!fs.existsSync(userDataDir)) {
-    fs.mkdirSync(userDataDir, { recursive: true });
-  }
-
-  const targetDbPath = path.join(userDataDir, 'dev.db');
-  const sourceDbPath = path.join(__dirname, '..', 'prisma', 'dev.db');
-
-  if (!fs.existsSync(targetDbPath) && fs.existsSync(sourceDbPath)) {
-    console.log(`Copying initial database from ${sourceDbPath} to ${targetDbPath}`);
-    fs.copyFileSync(sourceDbPath, targetDbPath);
-  }
-
-  return targetDbPath;
-}
-
-// 2. Poll server until ready
-function waitForServer(url, timeout = 30000) {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      http
-        .get(url, (res) => {
-          // Any HTTP status indicates server is responsive
-          resolve(true);
-        })
-        .on('error', () => {
-          if (Date.now() - start > timeout) {
-            reject(new Error('Server start timed out'));
-          } else {
-            setTimeout(check, 250);
-          }
-        });
-    };
-    check();
-  });
-}
-
-// 3. Start embedded local Next.js server
-function startServer(dbPath) {
-  const serverScript = path.join(__dirname, 'server.js');
-  const appDir = path.join(__dirname, '..');
-
-  const env = Object.assign({}, process.env, {
-    PORT: PORT.toString(),
-    NODE_ENV: 'production',
-    DATABASE_URL: `file:${dbPath}`,
-    NEXTAUTH_URL: `http://127.0.0.1:${PORT}`,
-    NEXTAUTH_SECRET: 'salon-management-secret-change-in-production-2024',
-  });
-
-  serverProcess = fork(serverScript, [], {
-    env,
-    cwd: appDir,
-    silent: false,
-  });
-
-  serverProcess.on('error', (err) => {
-    console.error('Local server process error:', err);
-  });
-
-  serverProcess.on('exit', (code, sig) => {
-    console.log(`Local server process exited with code ${code} and signal ${sig}`);
-  });
-}
-
-// 4. Create Desktop Application Window
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 920,
-    minWidth: 1024,
-    minHeight: 720,
-    title: 'Shruti Pahwa Luxury Salon and Academy',
-    backgroundColor: '#FAFAF9',
-    show: false,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-    },
-  });
-
-  mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-}
-
-// App lifecycle
-app.whenReady().then(async () => {
-  try {
-    const dbPath = setupDatabase();
-    console.log('Database path:', dbPath);
-
-    startServer(dbPath);
-
-    console.log('Waiting for local offline server...');
-    await waitForServer(`http://127.0.0.1:${PORT}/login`);
-    console.log('Server is ready! Opening desktop window...');
-
-    createWindow();
-  } catch (err) {
-    console.error('Initialization error:', err);
-    dialog.showErrorBox(
-      'Startup Error',
-      `Failed to launch Shruti Pahwa Luxury Salon offline server: ${err.message}`
-    );
-  }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+if (!app.requestSingleInstanceLock()) app.quit();
+app.on('second-instance', () => {
+  if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
 });
 
-function cleanup() {
-  if (serverProcess) {
-    try {
-      serverProcess.kill('SIGTERM');
-    } catch (e) {}
-    serverProcess = null;
+function prepareData() {
+  const dir = app.getPath('userData');
+  fs.mkdirSync(dir, { recursive: true });
+  const db = path.join(dir, 'salon.db');
+  if (!fs.existsSync(db)) {
+    const starter = path.join(ROOT, 'prisma', 'dev.db');
+    if (!fs.existsSync(starter)) throw new Error('No starter database found. Run "npm run setup" first.');
+    fs.copyFileSync(starter, db);
   }
+  const secretFile = path.join(dir, 'session-secret');
+  if (!fs.existsSync(secretFile)) fs.writeFileSync(secretFile, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
+  return { db, secret: fs.readFileSync(secretFile, 'utf8').trim() };
 }
 
-app.on('before-quit', cleanup);
-app.on('will-quit', cleanup);
-app.on('window-all-closed', () => {
-  cleanup();
-  if (process.platform !== 'darwin') {
+function startServer({ db, secret }) {
+  return new Promise((resolve, reject) => {
+    server = utilityProcess.fork(path.join(__dirname, 'server.js'), [], {
+      cwd: ROOT,
+      env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: `file:${db}`, SESSION_SECRET: secret },
+      stdio: 'inherit',
+    });
+    const timer = setTimeout(() => reject(new Error('The app server took too long to start.')), 60000);
+    server.on('message', (m) => {
+      clearTimeout(timer);
+      if (m && m.port) resolve(m.port);
+      else reject(new Error((m && m.error) || 'The app server failed to start.'));
+    });
+    server.on('exit', (code) => { if (code) reject(new Error(`The app server stopped (code ${code}).`)); });
+  });
+}
+
+async function launch() {
+  if (!fs.existsSync(path.join(ROOT, '.next', 'BUILD_ID'))) {
+    dialog.showErrorBox('Salon Studio is not built yet', 'Start it with "npm run desktop", which builds the app before opening it.');
+    return app.quit();
+  }
+  try {
+    const port = await startServer(prepareData());
+    win = new BrowserWindow({
+      width: 1440, height: 920, minWidth: 1024, minHeight: 680,
+      title: 'Salon Studio', backgroundColor: '#f7f5f8', show: false,
+      webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false },
+    });
+    const origin = `http://127.0.0.1:${port}`;
+    win.webContents.setWindowOpenHandler(({ url }) => {
+      if (!url.startsWith(origin)) shell.openExternal(url);
+      return { action: 'deny' };
+    });
+    win.once('ready-to-show', () => win.show());
+    win.on('closed', () => { win = null; });
+    await win.loadURL(`${origin}/login`);
+  } catch (err) {
+    dialog.showErrorBox('Salon Studio could not start', String(err && err.message ? err.message : err));
     app.quit();
   }
-});
+}
+
+app.whenReady().then(launch);
+app.on('window-all-closed', () => app.quit());
+app.on('will-quit', () => { if (server) server.kill(); });
