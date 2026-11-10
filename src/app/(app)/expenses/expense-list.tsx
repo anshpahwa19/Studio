@@ -11,17 +11,18 @@ import { deleteExpense, saveExpense, type ExpenseInput } from './actions';
 
 type Expense = { id: string; date: string; category: string; description: string; amount: number; method: string; vendor: string | null; branchId: string | null; branch: { name: string } | null };
 
-export function ExpenseList({ month, expenses, categories, branches }: { month: string; expenses: Expense[]; categories: string[]; branches: { id: string; name: string }[] }) {
+export function ExpenseList({ month, expenses, categories, branches, autoOpen = false }: { month: string; expenses: Expense[]; categories: string[]; branches: { id: string; name: string }[]; autoOpen?: boolean }) {
   const router = useRouter();
-  const [f, setF] = useState<ExpenseInput | null>(null);
-  const { run, pending } = useAction();
   const today = isoDate();
+  const blank = (): ExpenseInput => ({ date: today.startsWith(month) ? today : `${month}-01`, category: categories[0], description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branches[0]?.id ?? null });
+  const [f, setF] = useState<ExpenseInput | null>(autoOpen ? blank() : null);
+  const { run, pending } = useAction();
 
   return (
     <div className="min-w-0">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Input type="month" value={month} onChange={(e) => e.target.value && router.push(`/expenses?month=${e.target.value}`)} className="w-auto" aria-label="Month" />
-        <Button className="ml-auto" onClick={() => setF({ date: today.startsWith(month) ? today : `${month}-01`, category: categories[0], description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branches[0]?.id ?? null })}>
+        <Button className="ml-auto" onClick={() => setF(blank())}>
           <Plus size={16} />Record expense
         </Button>
       </div>

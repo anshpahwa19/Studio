@@ -8,7 +8,7 @@ export default async function AccountPage() {
   if (!me) redirect('/login');
   return (
     <>
-      <PageHeader title="My account" subtitle={`${me.name} · ${me.email} · ${me.role}`} />
+      <PageHeader title="My Account" subtitle={`${me.name} · ${me.email} · ${me.role}`} />
       <Card title="Change password" className="max-w-md"><PasswordForm /></Card>
     </>
   );

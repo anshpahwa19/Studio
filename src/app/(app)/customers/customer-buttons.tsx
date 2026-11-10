@@ -8,12 +8,12 @@ import { useAction } from '@/components/use-action';
 import { CustomerForm, type StaffOption } from './customer-form';
 import { archiveCustomer, type CustomerInput } from './actions';
 
-export function NewCustomerButton({ staff }: { staff: StaffOption[] }) {
-  const [open, setOpen] = useState(false);
+export function NewCustomerButton({ staff, autoOpen = false }: { staff: StaffOption[]; autoOpen?: boolean }) {
+  const [open, setOpen] = useState(autoOpen);
   const router = useRouter();
   return (
     <>
-      <Button onClick={() => setOpen(true)}><Plus size={16} />New client</Button>
+      <Button onClick={() => setOpen(true)}><Plus size={16} />Add new client</Button>
       <Modal open={open} onClose={() => setOpen(false)} title="New client" wide>
         <CustomerForm staff={staff} onDone={(c) => { setOpen(false); if (c) router.push(`/customers/${c.id}`); }} />
       </Modal>

@@ -14,8 +14,8 @@ export function BarChart({ data, height = 180 }: { data: { label: string; value:
         const y = top + plotH - (t / nice) * plotH;
         return (
           <g key={t}>
-            <line x1={left} x2={W} y1={y} y2={y} stroke="#e7e3ea" />
-            <text x={left - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#7a7383">{short(t)}</text>
+            <line x1={left} x2={W} y1={y} y2={y} stroke="#e7e5e4" />
+            <text x={left - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#78716c">{short(t)}</text>
           </g>
         );
       })}
@@ -24,11 +24,11 @@ export function BarChart({ data, height = 180 }: { data: { label: string; value:
         const x = left + i * bw + bw * 0.18;
         return (
           <g key={i}>
-            <rect x={x} y={top + plotH - h} width={bw * 0.64} height={Math.max(h, d.value ? 1 : 0)} rx="3" fill="#8a3f74">
+            <rect x={x} y={top + plotH - h} width={bw * 0.64} height={Math.max(h, d.value ? 1 : 0)} rx="3" fill="#7c3aed">
               <title>{`${d.label}: ${money0(d.value)}`}</title>
             </rect>
             {(data.length <= 16 || i % Math.ceil(data.length / 12) === 0) && (
-              <text x={x + bw * 0.32} y={H - 6} textAnchor="middle" fontSize="11" fill="#7a7383">{d.label}</text>
+              <text x={x + bw * 0.32} y={H - 6} textAnchor="middle" fontSize="11" fill="#78716c">{d.label}</text>
             )}
           </g>
         );

@@ -6,7 +6,7 @@ import { fmtDate, money0, plural } from '@/lib/format';
 import { Card, Empty, Input, PageHeader } from '@/components/ui';
 import { NewCustomerButton } from './customer-buttons';
 
-export default async function CustomersPage({ searchParams }: { searchParams: { q?: string } }) {
+export default async function CustomersPage({ searchParams }: { searchParams: { q?: string; new?: string } }) {
   const user = await requirePage('customers');
   const q = searchParams.q?.trim() ?? '';
   const customers = await db.customer.findMany({
@@ -26,7 +26,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
 
   return (
     <>
-      <PageHeader title="Clients" subtitle={plural(customers.length, q ? 'matching client' : 'active client')} actions={canEdit(user.role, 'customers') && <NewCustomerButton staff={staff} />} />
+      <PageHeader title="Customers (CRM)" subtitle={`${plural(customers.length, q ? 'matching client' : 'active client')} · profiles, visit history and styling notes`} actions={canEdit(user.role, 'customers') && <NewCustomerButton staff={staff} autoOpen={searchParams.new === '1'} />} />
       <form className="mb-4 max-w-md">
         <Input id="q" name="q" defaultValue={q} placeholder="Search by name, mobile or email" aria-label="Search clients" />
       </form>

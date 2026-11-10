@@ -6,7 +6,7 @@ import { ExpenseList } from './expense-list';
 
 const DEFAULT_CATEGORIES = ['Rent', 'Salaries', 'Utilities', 'Product restock', 'Laundry', 'Marketing', 'Refreshments', 'Maintenance'];
 
-export default async function ExpensesPage({ searchParams }: { searchParams: { month?: string } }) {
+export default async function ExpensesPage({ searchParams }: { searchParams: { month?: string; new?: string } }) {
   await requirePage('expenses');
   const month = /^\d{4}-\d{2}$/.test(searchParams.month ?? '') ? searchParams.month! : isoDate().slice(0, 7);
   const from = `${month}-01`;
@@ -22,9 +22,9 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { m
 
   return (
     <>
-      <PageHeader title="Expenses" subtitle={`${fmtDate(from, { month: 'long', year: 'numeric' })} · ${money0(total)} spent`} />
+      <PageHeader title="Business Expenses" subtitle={`${fmtDate(from, { month: 'long', year: 'numeric' })} · ${money0(total)} spent`} />
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_280px]">
-        <ExpenseList month={month} expenses={expenses} categories={categories} branches={branches} />
+        <ExpenseList autoOpen={searchParams.new === '1'} month={month} expenses={expenses} categories={categories} branches={branches} />
         <Card title="By category">
           {byCategory.length === 0 ? <p className="text-ink-mute">Nothing recorded this month.</p> : (
             <ul className="space-y-3">

@@ -30,7 +30,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
       <article className="print-sheet card mx-auto max-w-3xl p-8 sm:p-10">
         <header className="flex flex-wrap items-start justify-between gap-6 border-b border-line pb-6">
           <div>
-            <div className="font-display text-[24px] leading-tight">{s.name}</div>
+            <div className="text-[22px] font-bold leading-tight tracking-tight">{s.name}</div>
             <div className="mt-1 whitespace-pre-line text-[12.5px] text-ink-soft">
               {inv.branch ? `${inv.branch.name}, ${inv.branch.address}` : s.address}
               {s.phone && `\n${s.phone}`}{s.email && ` · ${s.email}`}
