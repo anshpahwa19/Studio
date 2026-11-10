@@ -6,7 +6,7 @@ import {
   BarChart3, Bell, CalendarDays, CalendarPlus, ChevronDown, ChevronLeft, LayoutDashboard, LogOut, Menu, Package, Plus,
   Receipt, Scissors, Search, Settings, UserCheck, UserPlus, Users, Wallet, X,
 } from 'lucide-react';
-import { signOut } from '@/app/auth-actions';
+import { SignOutDialog } from './sign-out';
 import { cx } from './ui';
 
 type NavItem = { href: string; label: string };
@@ -40,6 +40,7 @@ export function Shell({ items, salon, user, alerts, canBill, children }: {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   useEffect(() => {
     try { setCollapsed(localStorage.getItem('sidebar-collapsed') === '1'); } catch {}
   }, []);
@@ -112,18 +113,17 @@ export function Shell({ items, salon, user, alerts, canBill, children }: {
               <span className="block text-[12.5px] font-medium text-violet-600">{user.role}</span>
             </span>
           </Link>
-          <form action={signOut}>
-            <button type="submit" aria-label="Sign out" title="Sign out" className="rounded-lg p-2 text-ink-mute hover:bg-stone-100 hover:text-ink"><LogOut size={18} /></button>
-          </form>
+          <button type="button" onClick={() => setSigningOut(true)} aria-label="Sign out" title="Sign out" className="rounded-lg p-2 text-ink-mute hover:bg-stone-100 hover:text-ink"><LogOut size={18} /></button>
         </div>
       </aside>
 
       <div className="min-w-0 flex-1">
-        <TopBar title={title[1]} subtitle={title[2]} onMenu={() => setOpen(true)} alerts={alerts} user={user} canBill={canBill} />
+        <TopBar title={title[1]} subtitle={title[2]} onMenu={() => setOpen(true)} alerts={alerts} user={user} canBill={canBill} onSignOut={() => setSigningOut(true)} />
         <main className="px-4 py-6 sm:px-8 lg:py-8">
           <div className="mx-auto max-w-[1280px]">{children}</div>
         </main>
       </div>
+      <SignOutDialog open={signingOut} onClose={() => setSigningOut(false)} />
     </div>
   );
 }
@@ -140,8 +140,8 @@ function useOutside(close: () => void) {
   return ref;
 }
 
-function TopBar({ title, subtitle, onMenu, alerts, user, canBill }: {
-  title: string; subtitle: string; onMenu: () => void; alerts: Alert[]; user: { name: string; role: string }; canBill: boolean;
+function TopBar({ title, subtitle, onMenu, alerts, user, canBill, onSignOut }: {
+  title: string; subtitle: string; onMenu: () => void; alerts: Alert[]; user: { name: string; role: string }; canBill: boolean; onSignOut: () => void;
 }) {
   const router = useRouter();
   const [q, setQ] = useState('');
@@ -214,7 +214,7 @@ function TopBar({ title, subtitle, onMenu, alerts, user, canBill }: {
             <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-line bg-white shadow-xl">
               <div className="border-b border-line px-4 py-3"><div className="truncate text-[14px] font-semibold">{user.name}</div><div className="text-[12.5px] text-violet-600">{user.role}</div></div>
               <Link href="/account" onClick={close} className="block px-4 py-2.5 text-[14px] text-ink-soft hover:bg-stone-50">My account</Link>
-              <form action={signOut}><button type="submit" className="w-full px-4 py-2.5 text-left text-[14px] text-ink-soft hover:bg-stone-50">Sign out</button></form>
+              <button type="button" onClick={() => { close(); onSignOut(); }} className="w-full px-4 py-2.5 text-left text-[14px] text-ink-soft hover:bg-stone-50">Sign out</button>
             </div>
           )}
         </div>

@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft, Scissors } from 'lucide-react';
 import { db } from '@/lib/db';
 import { requirePage } from '@/lib/session';
 import { isSenior } from '@/lib/roles';
-import { fmtDate, fmtDateTime, money } from '@/lib/format';
+import { fmtDate, fmtDateTime, money, rupeesInWords } from '@/lib/format';
 import { InvoiceStatus } from '@/components/ui';
 import { InvoiceActions } from './invoice-actions';
 
@@ -19,99 +20,154 @@ export default async function InvoicePage({ params }: { params: { id: string } }
   if (!inv || !s) notFound();
   const due = inv.total - inv.paid;
   const gst = inv.tax > 0;
+  const rate = inv.items[0]?.taxRate ?? 0;
+  const isVoid = inv.status === 'Void';
+  const label = 'text-[9pt] font-bold uppercase tracking-[0.1em] text-stone-500';
 
   return (
     <>
       <div className="no-print mb-5 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/billing" className="text-[13px] text-ink-mute hover:text-ink">← All bills</Link>
-        <InvoiceActions id={inv.id} due={inv.status === 'Void' ? 0 : due} isVoid={inv.status === 'Void'} canVoid={isSenior(user.role)} />
+        <Link href="/billing" className="inline-flex items-center gap-1.5 text-[14px] font-medium text-ink-soft hover:text-ink"><ArrowLeft size={16} />All bills</Link>
+        <InvoiceActions id={inv.id} number={inv.number} due={isVoid ? 0 : due} isVoid={isVoid} canVoid={isSenior(user.role)} />
       </div>
 
-      <article className="print-sheet card mx-auto max-w-3xl p-8 sm:p-10">
-        <header className="flex flex-wrap items-start justify-between gap-6 border-b border-line pb-6">
-          <div>
-            <div className="text-[22px] font-bold leading-tight tracking-tight">{s.name}</div>
-            <div className="mt-1 whitespace-pre-line text-[12.5px] text-ink-soft">
-              {inv.branch ? `${inv.branch.name}, ${inv.branch.address}` : s.address}
-              {s.phone && `\n${s.phone}`}{s.email && ` · ${s.email}`}
+      {/* A4 sheet: 210 × 297 mm. Scrolls sideways on small screens rather than reflowing. */}
+      <div className="print-area -mx-4 overflow-x-auto bg-stone-100 px-4 py-6 sm:mx-0 sm:rounded-2xl sm:px-8 sm:py-10">
+        <article id="invoice-sheet" className="print-sheet relative mx-auto flex flex-col bg-white text-[10pt] leading-snug text-stone-900 shadow-xl"
+          style={{ width: '210mm', minHeight: '297mm', padding: '14mm 14mm 12mm' }}>
+          {isVoid && (
+            <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <span className="-rotate-[24deg] rounded-xl border-[6px] border-rose-300 px-10 py-3 text-[64pt] font-black tracking-[0.2em] text-rose-300/80">VOID</span>
             </div>
-            {s.gstin && gst && <div className="mt-1 text-[12.5px] font-medium">GSTIN {s.gstin}</div>}
-          </div>
-          <div className="text-right">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brass-500">{gst ? 'Tax invoice' : 'Invoice'}</div>
-            <div className="mt-1 text-[20px] font-semibold">{inv.number}</div>
-            <div className="text-[12.5px] text-ink-soft">{fmtDate(inv.createdAt, { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-            <div className="mt-2"><InvoiceStatus status={inv.status} /></div>
-          </div>
-        </header>
+          )}
 
-        <section className="grid gap-4 py-5 sm:grid-cols-2">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-mute">Billed to</div>
-            <div className="mt-1 font-medium">{inv.customer.name}</div>
-            <div className="text-[12.5px] text-ink-soft">{inv.customer.phone}{inv.customer.email && ` · ${inv.customer.email}`}</div>
-          </div>
-          {inv.createdBy && <div className="sm:text-right"><div className="text-[11px] font-semibold uppercase tracking-wide text-ink-mute">Billed by</div><div className="mt-1">{inv.createdBy}</div></div>}
-        </section>
+          <header className="flex items-start justify-between gap-6 border-b-2 border-violet-600 pb-5">
+            <div className="flex gap-4">
+              <span className="flex h-[16mm] w-[16mm] shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white"><Scissors size={26} /></span>
+              <div>
+                <div className="text-[17pt] font-extrabold leading-tight tracking-tight">{s.name}</div>
+                <div className="mt-1 text-[9pt] text-stone-600">{inv.branch ? `${inv.branch.name}, ${inv.branch.address}` : s.address}</div>
+                <div className="text-[9pt] text-stone-600">{[s.phone, s.email].filter(Boolean).join(' · ')}</div>
+                {gst && s.gstin && <div className="mt-1 text-[9pt] font-semibold">GSTIN: {s.gstin}</div>}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[18pt] font-extrabold uppercase tracking-[0.08em] text-violet-700">{gst ? 'Tax Invoice' : 'Invoice'}</div>
+              <div className="mt-1 text-[9pt] text-stone-500">Original for recipient</div>
+            </div>
+          </header>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-[13px]">
+          <section className="mt-5 grid grid-cols-4 overflow-hidden rounded-lg border border-stone-200">
+            {[
+              ['Invoice no.', inv.number],
+              ['Invoice date', fmtDate(inv.createdAt, { day: '2-digit', month: 'short', year: 'numeric' })],
+              ['Branch', inv.branch?.name ?? '—'],
+              ['Status', <InvoiceStatus key="s" status={inv.status} />],
+            ].map(([k, v], i) => (
+              <div key={i} className={`px-4 py-3 ${i ? 'border-l border-stone-200' : ''}`}>
+                <div className={label}>{k}</div>
+                <div className="mt-1 font-semibold">{v}</div>
+              </div>
+            ))}
+          </section>
+
+          <section className="mt-4 grid grid-cols-2 gap-4">
+            <div className="rounded-lg bg-stone-50 px-4 py-3">
+              <div className={label}>Billed to</div>
+              <div className="mt-1 text-[11pt] font-bold">{inv.customer.name}</div>
+              <div className="text-stone-600">{inv.customer.phone}</div>
+              {inv.customer.email && <div className="text-stone-600">{inv.customer.email}</div>}
+              {inv.customer.address && <div className="text-stone-600">{inv.customer.address}</div>}
+            </div>
+            <div className="rounded-lg bg-stone-50 px-4 py-3">
+              <div className={label}>Bill details</div>
+              <dl className="mt-1 space-y-0.5">
+                <div className="flex justify-between gap-3"><dt className="text-stone-600">Billed by</dt><dd className="font-medium">{inv.createdBy ?? '—'}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-stone-600">Place of supply</dt><dd className="font-medium">{s.address.split(',').pop()?.trim() || '—'}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-stone-600">GST</dt><dd className="font-medium">{gst ? `${rate}% (CGST ${rate / 2}% + SGST ${rate / 2}%)` : 'Not charged'}</dd></div>
+              </dl>
+            </div>
+          </section>
+
+          <table className="mt-5 w-full border-collapse text-[9.5pt]">
             <thead>
-              <tr className="border-y border-line text-left text-[11px] uppercase tracking-wide text-ink-mute">
-                <th className="py-2 pr-2 font-semibold">Item</th>
-                <th className="px-2 py-2 text-right font-semibold">Qty</th>
-                <th className="px-2 py-2 text-right font-semibold">Rate</th>
-                <th className="px-2 py-2 text-right font-semibold">Discount</th>
-                {gst && <th className="px-2 py-2 text-right font-semibold">GST</th>}
-                <th className="py-2 pl-2 text-right font-semibold">Amount</th>
+              <tr className="bg-violet-600 text-left text-[8.5pt] uppercase tracking-[0.06em] text-white">
+                <th className="rounded-l-md px-3 py-2 font-semibold">#</th>
+                <th className="px-3 py-2 font-semibold">Description</th>
+                <th className="px-3 py-2 text-right font-semibold">Qty</th>
+                <th className="px-3 py-2 text-right font-semibold">Rate</th>
+                <th className="px-3 py-2 text-right font-semibold">Discount</th>
+                <th className="px-3 py-2 text-right font-semibold">Taxable</th>
+                {gst && <th className="px-3 py-2 text-right font-semibold">GST</th>}
+                <th className="rounded-r-md px-3 py-2 text-right font-semibold">Amount</th>
               </tr>
             </thead>
             <tbody className="tabular">
-              {inv.items.map((i) => (
-                <tr key={i.id} className="border-b border-line/70">
-                  <td className="py-2.5 pr-2"><div className="font-medium">{i.name}</div>{i.staff && <div className="text-[11.5px] text-ink-mute">by {i.staff.name}</div>}</td>
-                  <td className="px-2 text-right">{i.qty}</td>
-                  <td className="px-2 text-right">{money(i.unitPrice)}</td>
-                  <td className="px-2 text-right">{i.discount ? money(i.discount) : '—'}</td>
-                  {gst && <td className="px-2 text-right">{money(i.tax)}<div className="text-[11px] text-ink-mute">{i.taxRate}%</div></td>}
-                  <td className="pl-2 text-right font-medium">{money(i.total)}</td>
+              {inv.items.map((i, n) => (
+                <tr key={i.id} className="border-b border-stone-200 align-top">
+                  <td className="px-3 py-2.5 text-stone-500">{n + 1}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="font-semibold">{i.name}</div>
+                    <div className="text-[8.5pt] text-stone-500">{i.kind === 'service' ? 'Service' : 'Product'}{i.staff && ` · by ${i.staff.name}`}</div>
+                  </td>
+                  <td className="px-3 py-2.5 text-right">{i.qty}</td>
+                  <td className="px-3 py-2.5 text-right">{money(i.unitPrice)}</td>
+                  <td className="px-3 py-2.5 text-right">{i.discount ? money(i.discount) : '—'}</td>
+                  <td className="px-3 py-2.5 text-right">{money(i.qty * i.unitPrice - i.discount)}</td>
+                  {gst && <td className="px-3 py-2.5 text-right">{money(i.tax)}<div className="text-[8pt] text-stone-500">{i.taxRate}%</div></td>}
+                  <td className="px-3 py-2.5 text-right font-semibold">{money(i.total)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
 
-        <section className="mt-5 flex flex-wrap justify-between gap-6">
-          <div className="min-w-[200px] flex-1">
-            {inv.payments.length > 0 && (
-              <>
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-mute">Payments</div>
-                <ul className="mt-1 space-y-0.5 text-[12.5px]">
-                  {inv.payments.map((p) => (
-                    <li key={p.id} className="tabular">{fmtDateTime(p.createdAt)} · {p.method}{p.reference && ` (${p.reference})`} · {money(p.amount)}</li>
-                  ))}
-                </ul>
-              </>
-            )}
-            {inv.notes && <p className="mt-3 whitespace-pre-line text-[12.5px] text-ink-soft">{inv.notes}</p>}
-          </div>
-          <dl className="tabular w-64 space-y-1 text-[13px]">
-            <div className="flex justify-between"><dt className="text-ink-soft">Subtotal</dt><dd>{money(inv.subtotal)}</dd></div>
-            {inv.discount > 0 && <div className="flex justify-between"><dt className="text-ink-soft">Discount{inv.discountType === 'percent' && ` (${inv.discountValue}%)`}</dt><dd>− {money(inv.discount)}</dd></div>}
-            {gst ? (
-              <>
-                <div className="flex justify-between"><dt className="text-ink-soft">CGST ({inv.items[0]?.taxRate / 2}%)</dt><dd>{money(inv.tax / 2)}</dd></div>
-                <div className="flex justify-between"><dt className="text-ink-soft">SGST ({inv.items[0]?.taxRate / 2}%)</dt><dd>{money(inv.tax / 2)}</dd></div>
-              </>
-            ) : <div className="flex justify-between"><dt className="text-ink-soft">GST</dt><dd>Not charged</dd></div>}
-            <div className="flex justify-between border-t border-line pt-1.5 text-[15px] font-semibold"><dt>Total</dt><dd>{money(inv.total)}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-soft">Paid</dt><dd>{money(inv.paid)}</dd></div>
-            {inv.status !== 'Void' && due > 0.005 && <div className="flex justify-between font-semibold text-amber-700"><dt>Balance due</dt><dd>{money(due)}</dd></div>}
-          </dl>
-        </section>
+          <section className="mt-5 grid grid-cols-[1fr_74mm] gap-6">
+            <div className="space-y-4">
+              <div>
+                <div className={label}>Amount in words</div>
+                <div className="mt-1 font-semibold italic">{rupeesInWords(inv.total)}</div>
+              </div>
+              {inv.payments.length > 0 && (
+                <div>
+                  <div className={label}>Payments received</div>
+                  <ul className="mt-1 space-y-0.5 text-[9pt]">
+                    {inv.payments.map((p) => (
+                      <li key={p.id} className="tabular flex justify-between gap-3 border-b border-dashed border-stone-200 py-0.5">
+                        <span>{fmtDateTime(p.createdAt)} · {p.method}{p.reference && ` (${p.reference})`}</span><span className="font-medium">{money(p.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {inv.notes && <div><div className={label}>Notes</div><p className="mt-1 whitespace-pre-line text-[9pt] text-stone-600">{inv.notes}</p></div>}
+            </div>
+            <dl className="tabular self-start overflow-hidden rounded-lg border border-stone-200">
+              <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">Subtotal</dt><dd>{money(inv.subtotal)}</dd></div>
+              {inv.discount > 0 && <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">Discount{inv.discountType === 'percent' && ` (${inv.discountValue}%)`}</dt><dd>− {money(inv.discount)}</dd></div>}
+              {gst ? (
+                <>
+                  <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">CGST @ {rate / 2}%</dt><dd>{money(inv.tax / 2)}</dd></div>
+                  <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">SGST @ {rate / 2}%</dt><dd>{money(inv.tax / 2)}</dd></div>
+                </>
+              ) : <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">GST</dt><dd>Not charged</dd></div>}
+              <div className="flex justify-between bg-violet-600 px-4 py-2.5 text-[12pt] font-bold text-white"><dt>Total</dt><dd>{money(inv.total)}</dd></div>
+              <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">Paid</dt><dd>{money(inv.paid)}</dd></div>
+              {!isVoid && due > 0.005 && <div className="flex justify-between bg-amber-50 px-4 py-1.5 font-bold text-amber-800"><dt>Balance due</dt><dd>{money(due)}</dd></div>}
+            </dl>
+          </section>
 
-        {s.invoiceFooter && <footer className="mt-8 border-t border-line pt-4 text-center text-[12px] text-ink-mute">{s.invoiceFooter}</footer>}
-      </article>
+          <footer className="mt-auto pt-10">
+            <div className="flex items-end justify-between gap-6">
+              <p className="max-w-[100mm] text-[9pt] text-stone-600">{s.invoiceFooter}</p>
+              <div className="w-[60mm] text-center">
+                <div className="h-[14mm] border-b border-stone-400" />
+                <div className="mt-1 text-[8.5pt] text-stone-600">For {s.name}<br />Authorised signatory</div>
+              </div>
+            </div>
+            <div className="mt-6 border-t border-stone-200 pt-2 text-center text-[8pt] text-stone-400">This is a computer-generated invoice.</div>
+          </footer>
+        </article>
+      </div>
     </>
   );
 }
