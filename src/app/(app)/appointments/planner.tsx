@@ -329,7 +329,7 @@ function BookingForm({ initial, services, customers, staff, branches, onDone }: 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Date"><Input type="date" value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} required /></Field>
           <Field label="Start time"><Input type="time" step={900} value={d.startTime} onChange={(e) => setD({ ...d, startTime: e.target.value })} required /></Field>
-          <Field label="Stylist"><Select value={d.staffId} onChange={(e) => setD({ ...d, staffId: e.target.value })}>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
+          <Field label="Stylist"><Select aria-label="Stylist" value={d.staffId} onChange={(e) => setD({ ...d, staffId: e.target.value })}>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
           {branches.length > 0 && (
             <Field label="Branch"><Select value={d.branchId} onChange={(e) => setD({ ...d, branchId: e.target.value })}>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select></Field>
           )}
