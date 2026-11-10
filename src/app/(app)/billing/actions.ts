@@ -28,6 +28,7 @@ const schema = z.object({
   })).min(1, 'add at least one service or product'),
   discountType: z.enum(['percent', 'amount']).nullable(),
   discountValue: z.coerce.number().min(0).default(0),
+  withGst: z.boolean(),
   payments: z.array(payment),
   notes: v.optional(500),
 });
@@ -39,6 +40,8 @@ export async function createInvoice(input: InvoiceInput) {
     const d = schema.parse(input);
 
     const id = await db.$transaction(async (tx) => {
+      const { gstRate } = await tx.settings.findUniqueOrThrow({ where: { id: 1 } });
+      const gst = d.withGst ? gstRate : 0;
       const [services, products] = await Promise.all([
         tx.service.findMany({ where: { id: { in: d.lines.filter((l) => l.kind === 'service').map((l) => l.refId) } } }),
         tx.product.findMany({ where: { id: { in: d.lines.filter((l) => l.kind === 'product').map((l) => l.refId) } } }),
@@ -46,7 +49,7 @@ export async function createInvoice(input: InvoiceInput) {
       const lines = d.lines.map((l) => {
         const ref = l.kind === 'service' ? services.find((s) => s.id === l.refId) : products.find((p) => p.id === l.refId);
         if (!ref) throw new ActionError('An item on this bill no longer exists. Remove it and try again.');
-        return { ...l, name: ref.name, taxRate: ref.taxRate };
+        return { ...l, name: ref.name, taxRate: gst };
       });
 
       // Stock check, adding up repeated lines for the same product.

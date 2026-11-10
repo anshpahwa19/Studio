@@ -19,7 +19,7 @@ const settingsSchema = z.object({
   closeTime: v.time,
   invoicePrefix: z.string().trim().max(8).regex(/^[A-Za-z0-9-]*$/, 'use letters, numbers or -'),
   nextInvoiceNo: z.coerce.number().int().min(1),
-  defaultTaxRate: v.taxRate,
+  gstRate: v.gstRate,
   invoiceFooter: v.text(300),
 });
 export type SettingsInput = z.input<typeof settingsSchema>;

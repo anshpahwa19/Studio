@@ -5,13 +5,12 @@ import { Button, Card, Empty, Field, Input, Select, Textarea } from '@/component
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { fmtDuration, money0 } from '@/lib/format';
-import { TAX_RATES } from '@/lib/validate';
 import { addCategory, archiveService, saveService, type ServiceInput } from './actions';
 
-type Service = { id: string; name: string; description: string | null; categoryId: string; price: number; duration: number; taxRate: number };
+type Service = { id: string; name: string; description: string | null; categoryId: string; price: number; duration: number };
 type Category = { id: string; name: string; services: Service[] };
 
-export function ServiceManager({ categories, editable, defaultTax }: { categories: Category[]; editable: boolean; defaultTax: number }) {
+export function ServiceManager({ categories, editable }: { categories: Category[]; editable: boolean }) {
   const [editing, setEditing] = useState<ServiceInput | null>(null);
   const [archiving, setArchiving] = useState<Service | null>(null);
   const [newCat, setNewCat] = useState<string | null>(null);
@@ -35,7 +34,7 @@ export function ServiceManager({ categories, editable, defaultTax }: { categorie
         {editable && (
           <div className="ml-auto flex gap-2">
             <Button variant="secondary" onClick={() => setNewCat('')}>Add category</Button>
-            <Button onClick={() => setEditing({ name: '', categoryId: filter !== 'all' ? filter : categories[0]?.id ?? '', price: '' as unknown as number, duration: 30, taxRate: defaultTax })}>
+            <Button onClick={() => setEditing({ name: '', categoryId: filter !== 'all' ? filter : categories[0]?.id ?? '', price: '' as unknown as number, duration: 30 })}>
               <Plus size={16} />New service
             </Button>
           </div>
@@ -56,7 +55,6 @@ export function ServiceManager({ categories, editable, defaultTax }: { categorie
                     </div>
                     <div className="tabular w-16 text-ink-soft">{fmtDuration(s.duration)}</div>
                     <div className="tabular w-20 text-right font-medium">{money0(s.price)}</div>
-                    <div className="w-16 text-[12px] text-ink-mute">GST {s.taxRate}%</div>
                     {editable && (
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" onClick={() => setEditing({ ...s })}>Edit</Button>
@@ -88,11 +86,6 @@ export function ServiceManager({ categories, editable, defaultTax }: { categorie
             </Field>
             <Field label="Price before GST (₹)"><Input id="s-price" type="number" min="0" step="1" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value as unknown as number })} required /></Field>
             <Field label="Duration (minutes)"><Input id="s-dur" type="number" min="5" step="5" value={editing.duration} onChange={(e) => setEditing({ ...editing, duration: e.target.value as unknown as number })} required /></Field>
-            <Field label="GST rate">
-              <Select id="s-tax" value={editing.taxRate} onChange={(e) => setEditing({ ...editing, taxRate: Number(e.target.value) })}>
-                {TAX_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
-              </Select>
-            </Field>
             <Field label="Description" className="col-span-2"><Textarea id="s-desc" value={editing.description ?? ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></Field>
             <div className="col-span-2 flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>

@@ -42,15 +42,16 @@ To ship an installer without demo data, run `npm run setup:fresh` before `npm ru
 - **Appointments**: a day planner with one column per stylist, plus a week view. It checks salon hours, each stylist's
   working days and hours, and double bookings. The status moves from Booked to Checked in, In service and Completed, or to Cancelled or No-show.
   A completed appointment turns into a bill with its services already filled in.
-- **Billing**: services and products on one bill, a % or ₹ discount, GST per item worked out after the discount
-  (shown as CGST and SGST), and split payments by Cash, UPI, Card or Bank. You can collect dues later and void a bill with a reason.
-  Bills print or save as PDF from the bill page.
+- **Billing**: services and products on one bill, a % or ₹ discount, and split payments by Cash, UPI, Card or Bank.
+  GST is added after the discount at the rate set in Settings (5% unless you change it) and printed as CGST and SGST.
+  Untick **Charge GST** to make a bill without GST. A new client can be added right on the bill screen.
+  You can collect dues later and void a bill with a reason. Bills print or save as PDF from the bill page.
 - **Clients**: profiles with hair and nail notes, preferred stylist, visit history, total billed and balance due.
-- **Services, Staff, Inventory, Expenses**: the service menu with GST slabs, team hours and commission, stock
+- **Services, Staff, Inventory, Expenses**: the service menu, team hours and commission, stock
   that goes down on each sale with a full history, and monthly expenses by category.
 - **Reports**: sales before GST, expenses, profit, collections by payment method, top services and products, and
   each stylist's billed revenue and commission. Bills and expenses export as CSV for the accountant.
-- **Settings**: business details and GSTIN, opening hours, bill numbering, branches and logins.
+- **Settings**: business details and GSTIN, the GST rate for bills, opening hours, bill numbering, branches and logins.
 
 ### Who can do what
 

@@ -6,10 +6,7 @@ import { InventoryTable } from './inventory-table';
 
 export default async function InventoryPage() {
   await requirePage('inventory');
-  const [products, settings] = await Promise.all([
-    db.product.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
-    db.settings.findUnique({ where: { id: 1 } }),
-  ]);
+  const products = await db.product.findMany({ where: { active: true }, orderBy: { name: 'asc' } });
   const low = products.filter((p) => p.stock <= p.reorderLevel).length;
   const value = products.reduce((a, p) => a + p.stock * p.costPrice, 0);
   return (
@@ -20,7 +17,7 @@ export default async function InventoryPage() {
         <Stat label="Need reordering" value={low} tone={low ? 'warn' : 'good'} note="At or below reorder level" />
         <Stat label="Stock value at cost" value={money0(value)} />
       </div>
-      <InventoryTable products={products} defaultTax={settings?.defaultTaxRate ?? 18} />
+      <InventoryTable products={products} />
     </>
   );
 }

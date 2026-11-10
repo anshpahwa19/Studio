@@ -11,6 +11,7 @@ const db = new PrismaClient();
 const EMPTY = process.argv.includes('--empty');
 const RESET = process.argv.includes('--reset');
 const today = isoDate();
+const GST = 5;
 
 async function wipe() {
   await db.payment.deleteMany();
@@ -84,7 +85,7 @@ async function main() {
   const pooja = await mkStaff('Pooja Verma', '+91 99887 76605', 'Master Colourist', 'Balayage, Global Colour, Highlights', 35);
 
   // ── Services ──────────────────────────────────────────────
-  const svc: Record<string, { id: string; name: string; price: number; duration: number; taxRate: number }> = {};
+  const svc: Record<string, { id: string; name: string; price: number; duration: number }> = {};
   const services: [string, string, number, number, string][] = [
     ['Haircut & Styling', "Women's Signature Haircut", 950, 45, 'Consultation, wash, precision cut and blow-dry.'],
     ['Haircut & Styling', "Men's Executive Haircut", 600, 30, 'Fade or scissor cut with shampoo and head massage.'],
@@ -102,12 +103,12 @@ async function main() {
     ['Nail Art & Gel', 'Designer Nail Art (10 nails)', 1800, 60, 'Chrome, ombré, French or hand-painted art.'],
   ];
   for (const [c, name, price, duration, description] of services) {
-    const s = await db.service.create({ data: { categoryId: cat[c], name, price, duration, description, taxRate: 18 } });
+    const s = await db.service.create({ data: { categoryId: cat[c], name, price, duration, description } });
     svc[name] = s;
   }
 
   // ── Products ──────────────────────────────────────────────
-  const prod: Record<string, { id: string; name: string; price: number; taxRate: number; stock: number }> = {};
+  const prod: Record<string, { id: string; name: string; price: number; stock: number }> = {};
   const products: [string, string, string, string, number, number, number, number][] = [
     ['Argan Hydrating Shampoo 250ml', 'HC-001', 'Hair Care', "L'Oréal Professional", 420, 780, 24, 5],
     ['Keratin Smooth Conditioner 250ml', 'HC-002', 'Hair Care', "L'Oréal Professional", 380, 690, 18, 5],
@@ -175,15 +176,18 @@ async function main() {
     customerId: string; branchId: string; daysAgo: number; appointmentId?: string;
     lines: { service?: string; product?: string; staffId?: string; qty?: number }[];
     discount?: { type: 'percent' | 'amount'; value: number };
+    noGst?: boolean;
     payments: { amount?: number; method: string; reference?: string }[];
   }) {
     const raw = opts.lines.map((l) => {
       const item = l.service ? svc[l.service] : prod[l.product!];
-      return { kind: l.service ? 'service' : 'product', ref: item, staffId: l.staffId ?? null, qty: l.qty ?? 1, unitPrice: item.price, taxRate: item.taxRate };
+      return { kind: l.service ? 'service' : 'product', ref: item, staffId: l.staffId ?? null, qty: l.qty ?? 1, unitPrice: item.price, taxRate: opts.noGst ? 0 : GST };
     });
     const calc = computeBill(raw, opts.discount ?? { type: null, value: 0 });
     const createdAt = new Date(Date.now() - opts.daysAgo * 86400000);
-    const payments = opts.payments.map((p) => ({ ...p, amount: p.amount ?? calc.total }));
+    // A payment without an amount pays whatever is left.
+    let left = calc.total;
+    const payments = opts.payments.map((p) => { const amount = p.amount ?? left; left -= amount; return { ...p, amount }; });
     const paid = payments.reduce((a, p) => a + p.amount, 0);
     const number = `SP${next++}`;
     const inv = await db.invoice.create({
@@ -214,7 +218,7 @@ async function main() {
   await bill({ customerId: rhea.id, branchId: spaze.id, daysAgo: 1,
     lines: [{ service: 'Balayage & Toning', staffId: pooja.id }, { product: 'Golden Hair Serum 100ml' }],
     discount: { type: 'amount', value: 500 },
-    payments: [{ amount: 3000, method: 'Cash' }, { amount: 5319, method: 'UPI', reference: 'GPay 89472' }] });
+    payments: [{ amount: 3000, method: 'Cash' }, { method: 'UPI', reference: 'GPay 89472' }] });
   await bill({ customerId: ananya.id, branchId: huda.id, daysAgo: 2,
     lines: [{ service: 'Gel Extensions (Full Set)', staffId: neha.id }, { service: 'Designer Nail Art (10 nails)', staffId: neha.id }],
     payments: [{ method: 'Card', reference: 'HDFC POS 9912' }] });
@@ -232,7 +236,7 @@ async function main() {
     lines: [{ service: 'Argan Detox Hair Spa', staffId: rahul.id }],
     payments: [{ method: 'Cash' }] });
   await bill({ customerId: karan.id, branchId: spaze.id, daysAgo: 9,
-    lines: [{ service: "Men's Executive Haircut", staffId: arjun.id }],
+    lines: [{ service: "Men's Executive Haircut", staffId: arjun.id }], noGst: true,
     payments: [{ method: 'Cash' }] });
   await db.settings.update({ where: { id: 1 }, data: { nextInvoiceNo: next } });
 

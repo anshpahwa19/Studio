@@ -18,6 +18,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
   ]);
   if (!inv || !s) notFound();
   const due = inv.total - inv.paid;
+  const gst = inv.tax > 0;
 
   return (
     <>
@@ -34,10 +35,10 @@ export default async function InvoicePage({ params }: { params: { id: string } }
               {inv.branch ? `${inv.branch.name}, ${inv.branch.address}` : s.address}
               {s.phone && `\n${s.phone}`}{s.email && ` · ${s.email}`}
             </div>
-            {s.gstin && <div className="mt-1 text-[12.5px] font-medium">GSTIN {s.gstin}</div>}
+            {s.gstin && gst && <div className="mt-1 text-[12.5px] font-medium">GSTIN {s.gstin}</div>}
           </div>
           <div className="text-right">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brass-500">Tax invoice</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brass-500">{gst ? 'Tax invoice' : 'Invoice'}</div>
             <div className="mt-1 text-[20px] font-semibold">{inv.number}</div>
             <div className="text-[12.5px] text-ink-soft">{fmtDate(inv.createdAt, { day: 'numeric', month: 'long', year: 'numeric' })}</div>
             <div className="mt-2"><InvoiceStatus status={inv.status} /></div>
@@ -61,7 +62,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
                 <th className="px-2 py-2 text-right font-semibold">Qty</th>
                 <th className="px-2 py-2 text-right font-semibold">Rate</th>
                 <th className="px-2 py-2 text-right font-semibold">Discount</th>
-                <th className="px-2 py-2 text-right font-semibold">GST</th>
+                {gst && <th className="px-2 py-2 text-right font-semibold">GST</th>}
                 <th className="py-2 pl-2 text-right font-semibold">Amount</th>
               </tr>
             </thead>
@@ -72,7 +73,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
                   <td className="px-2 text-right">{i.qty}</td>
                   <td className="px-2 text-right">{money(i.unitPrice)}</td>
                   <td className="px-2 text-right">{i.discount ? money(i.discount) : '—'}</td>
-                  <td className="px-2 text-right">{money(i.tax)}<div className="text-[11px] text-ink-mute">{i.taxRate}%</div></td>
+                  {gst && <td className="px-2 text-right">{money(i.tax)}<div className="text-[11px] text-ink-mute">{i.taxRate}%</div></td>}
                   <td className="pl-2 text-right font-medium">{money(i.total)}</td>
                 </tr>
               ))}
@@ -97,8 +98,12 @@ export default async function InvoicePage({ params }: { params: { id: string } }
           <dl className="tabular w-64 space-y-1 text-[13px]">
             <div className="flex justify-between"><dt className="text-ink-soft">Subtotal</dt><dd>{money(inv.subtotal)}</dd></div>
             {inv.discount > 0 && <div className="flex justify-between"><dt className="text-ink-soft">Discount{inv.discountType === 'percent' && ` (${inv.discountValue}%)`}</dt><dd>− {money(inv.discount)}</dd></div>}
-            <div className="flex justify-between"><dt className="text-ink-soft">CGST</dt><dd>{money(inv.tax / 2)}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-soft">SGST</dt><dd>{money(inv.tax / 2)}</dd></div>
+            {gst ? (
+              <>
+                <div className="flex justify-between"><dt className="text-ink-soft">CGST ({inv.items[0]?.taxRate / 2}%)</dt><dd>{money(inv.tax / 2)}</dd></div>
+                <div className="flex justify-between"><dt className="text-ink-soft">SGST ({inv.items[0]?.taxRate / 2}%)</dt><dd>{money(inv.tax / 2)}</dd></div>
+              </>
+            ) : <div className="flex justify-between"><dt className="text-ink-soft">GST</dt><dd>Not charged</dd></div>}
             <div className="flex justify-between border-t border-line pt-1.5 text-[15px] font-semibold"><dt>Total</dt><dd>{money(inv.total)}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-soft">Paid</dt><dd>{money(inv.paid)}</dd></div>
             {inv.status !== 'Void' && due > 0.005 && <div className="flex justify-between font-semibold text-amber-700"><dt>Balance due</dt><dd>{money(due)}</dd></div>}

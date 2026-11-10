@@ -11,6 +11,6 @@ export const money = z.coerce.number().min(0, 'cannot be negative').max(10_000_0
 export const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'pick a date');
 export const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'pick a time');
 export const id = z.string().min(1);
-export const TAX_RATES = [0, 5, 12, 18, 28] as const;
-export const taxRate = z.coerce.number().refine((n) => (TAX_RATES as readonly number[]).includes(n), 'choose a GST slab');
+export const GST_RATES = [5, 12, 18, 28] as const;
+export const gstRate = z.coerce.number().refine((n) => (GST_RATES as readonly number[]).includes(n), 'choose a GST rate');
 export const PAYMENT_METHODS = ['Cash', 'UPI', 'Card', 'Bank'] as const;

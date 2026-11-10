@@ -5,15 +5,14 @@ import { Badge, Button, Card, Empty, Field, Input, Select } from '@/components/u
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { fmtDateTime, money } from '@/lib/format';
-import { TAX_RATES } from '@/lib/validate';
 import { archiveProduct, moveStock, saveProduct, stockHistory, type ProductInput } from './actions';
 
-type Product = { id: string; name: string; sku: string | null; category: string; supplier: string | null; costPrice: number; price: number; taxRate: number; stock: number; reorderLevel: number; unit: string };
+type Product = { id: string; name: string; sku: string | null; category: string; supplier: string | null; costPrice: number; price: number; stock: number; reorderLevel: number; unit: string };
 type Move = Awaited<ReturnType<typeof stockHistory>>[number];
 
 const MOVE_LABEL: Record<string, string> = { IN: 'Received', OUT: 'Used / removed', ADJUST: 'Count correction', SALE: 'Sold', RETURN: 'Returned' };
 
-export function InventoryTable({ products, defaultTax }: { products: Product[]; defaultTax: number }) {
+export function InventoryTable({ products }: { products: Product[] }) {
   const [q, setQ] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
   const [edit, setEdit] = useState<ProductInput | null>(null);
@@ -29,7 +28,7 @@ export function InventoryTable({ products, defaultTax }: { products: Product[]; 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, SKU or category" className="max-w-xs" aria-label="Search products" />
         <label className="flex items-center gap-2 text-[13.5px]"><input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} className="h-4 w-4 accent-plum-600" />Only items to reorder</label>
-        <Button className="ml-auto" onClick={() => setEdit({ name: '', category: categories[0] ?? 'General', costPrice: 0, price: '' as unknown as number, taxRate: defaultTax, reorderLevel: 5, unit: 'pcs', openingStock: 0 })}>
+        <Button className="ml-auto" onClick={() => setEdit({ name: '', category: categories[0] ?? 'General', costPrice: 0, price: '' as unknown as number, reorderLevel: 5, unit: 'pcs', openingStock: 0 })}>
           <Plus size={16} />Add product
         </Button>
       </div>
@@ -79,7 +78,6 @@ export function InventoryTable({ products, defaultTax }: { products: Product[]; 
             <Field label="SKU"><Input value={edit.sku ?? ''} onChange={(e) => setEdit({ ...edit, sku: e.target.value })} /></Field>
             <Field label="Cost price (₹)"><Input type="number" min="0" step="0.01" value={edit.costPrice} onChange={(e) => setEdit({ ...edit, costPrice: e.target.value as unknown as number })} /></Field>
             <Field label="Selling price before GST (₹)"><Input type="number" min="0" step="0.01" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value as unknown as number })} required /></Field>
-            <Field label="GST rate"><Select value={edit.taxRate} onChange={(e) => setEdit({ ...edit, taxRate: Number(e.target.value) })}>{TAX_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</Select></Field>
             <Field label="Unit"><Input value={edit.unit} onChange={(e) => setEdit({ ...edit, unit: e.target.value })} required placeholder="pcs, ml, bottle" /></Field>
             <Field label="Reorder at"><Input type="number" min="0" value={edit.reorderLevel} onChange={(e) => setEdit({ ...edit, reorderLevel: e.target.value as unknown as number })} /></Field>
             {!edit.id && <Field label="Opening stock"><Input type="number" min="0" value={edit.openingStock ?? 0} onChange={(e) => setEdit({ ...edit, openingStock: e.target.value as unknown as number })} /></Field>}

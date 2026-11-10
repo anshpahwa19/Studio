@@ -4,7 +4,7 @@ import { Badge, Button, Card, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { ROLES } from '@/lib/roles';
-import { TAX_RATES } from '@/lib/validate';
+import { GST_RATES } from '@/lib/validate';
 import { saveBranch, saveSettings, saveUser, type SettingsInput } from './actions';
 
 type Branch = { id: string; name: string; address: string; active: boolean };
@@ -34,7 +34,7 @@ export function SettingsForms({ settings, branches, users, meId }: { settings: S
           <Field label="Phone"><Input value={s.phone} onChange={set('phone')} /></Field>
           <Field label="Email"><Input value={s.email} onChange={set('email')} /></Field>
           <Field label="GSTIN" hint="Leave blank if not registered"><Input value={s.gstin} onChange={set('gstin')} className="uppercase" /></Field>
-          <Field label="Default GST for new items"><Select value={s.defaultTaxRate} onChange={(e) => setS({ ...s, defaultTaxRate: Number(e.target.value) })}>{TAX_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</Select></Field>
+          <Field label="GST rate on bills" hint="Used on every bill that charges GST. A bill can also be made without GST."><Select value={s.gstRate} onChange={(e) => setS({ ...s, gstRate: Number(e.target.value) })}>{GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</Select></Field>
           <Field label="Opens at"><Input type="time" value={s.openTime} onChange={set('openTime')} /></Field>
           <Field label="Closes at"><Input type="time" value={s.closeTime} onChange={set('closeTime')} /></Field>
           <Field label="Bill number prefix"><Input value={s.invoicePrefix} onChange={set('invoicePrefix')} /></Field>

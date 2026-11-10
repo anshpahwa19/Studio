@@ -31,7 +31,7 @@ model Settings {
   closeTime      String @default("21:00")
   invoicePrefix  String @default("INV")
   nextInvoiceNo  Int    @default(1001)
-  defaultTaxRate Float  @default(18)
+  gstRate        Float  @default(5) // applied to every bill that charges GST
   invoiceFooter  String @default("Thank you for visiting us.")
 }
 
@@ -98,7 +98,6 @@ model Service {
   categoryId  String
   price       Float
   duration    Int // minutes
-  taxRate     Float                @default(18)
   active      Boolean              @default(true)
   category    ServiceCategory      @relation(fields: [categoryId], references: [id])
   bookings    AppointmentService[]
@@ -146,7 +145,6 @@ model Product {
   supplier     String?
   costPrice    Float           @default(0)
   price        Float
-  taxRate      Float           @default(18)
   stock        Int             @default(0)
   reorderLevel Int             @default(5)
   unit         String          @default("pcs")
@@ -207,7 +205,7 @@ model InvoiceItem {
   name      String
   qty       Int
   unitPrice Float
-  taxRate   Float
+  taxRate   Float // GST % charged on this line (0 when the bill has no GST)
   discount  Float    @default(0)
   tax       Float    @default(0)
   total     Float // after discount, including tax

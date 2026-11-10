@@ -8,23 +8,28 @@ import { computeBill } from '@/lib/billing';
 import { money, round2 } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
 import { createInvoice } from '../actions';
+import { saveCustomer } from '../../customers/actions';
 
-export type PosLine = { key: string; kind: 'service' | 'product'; refId: string; name: string; qty: number; unitPrice: number; taxRate: number; staffId: string | null };
+export type PosLine = { key: string; kind: 'service' | 'product'; refId: string; name: string; qty: number; unitPrice: number; staffId: string | null };
 type Pay = { amount: string; method: (typeof PAYMENT_METHODS)[number]; reference: string };
 
 type Props = {
+  gstRate: number;
   customers: { id: string; name: string; phone: string }[];
-  services: { id: string; name: string; price: number; taxRate: number }[];
-  products: { id: string; name: string; price: number; taxRate: number; stock: number; sku: string | null }[];
+  services: { id: string; name: string; price: number }[];
+  products: { id: string; name: string; price: number; stock: number; sku: string | null }[];
   staff: { id: string; name: string }[];
   branches: { id: string; name: string }[];
   initial: { customerId: string; branchId: string; lines: PosLine[]; appointmentId: string | null };
 };
 
-export function PosForm({ customers, services, products, staff, branches, initial }: Props) {
+export function PosForm({ gstRate, customers: initialCustomers, services, products, staff, branches, initial }: Props) {
   const router = useRouter();
   const { run, pending } = useAction();
+  const [customers, setCustomers] = useState(initialCustomers);
   const [customerId, setCustomerId] = useState(initial.customerId);
+  const [newClient, setNewClient] = useState<{ name: string; phone: string } | null>(null);
+  const [withGst, setWithGst] = useState(true);
   const [cq, setCq] = useState('');
   const [branchId, setBranchId] = useState(initial.branchId);
   const [lines, setLines] = useState<PosLine[]>(initial.lines);
@@ -36,7 +41,8 @@ export function PosForm({ customers, services, products, staff, branches, initia
   const [autoPay, setAutoPay] = useState(true);
   const [notes, setNotes] = useState('');
 
-  const bill = computeBill(lines, { type: discType, value: Number(discValue) || 0 });
+  const rate = withGst ? gstRate : 0;
+  const bill = computeBill(lines.map((l) => ({ ...l, taxRate: rate })), { type: discType, value: Number(discValue) || 0 });
   const customer = customers.find((c) => c.id === customerId);
   const payments = autoPay ? [{ ...pays[0], amount: String(bill.total) }, ...pays.slice(1)] : pays;
   const paid = round2(payments.reduce((a, p) => a + (Number(p.amount) || 0), 0));
@@ -46,20 +52,29 @@ export function PosForm({ customers, services, products, staff, branches, initia
     const t = cq.trim().toLowerCase();
     return t ? customers.filter((c) => c.name.toLowerCase().includes(t) || c.phone.replace(/\s/g, '').includes(t.replace(/\s/g, ''))).slice(0, 6) : [];
   }, [cq, customers]);
-  const catalog: { id: string; name: string; price: number; taxRate: number; stock: number | null; sku: string | null }[] =
+  const catalog: { id: string; name: string; price: number; stock: number | null; sku: string | null }[] =
     tab === 'service' ? services.map((s) => ({ ...s, stock: null, sku: null })) : products;
   const items = catalog.filter((x) => `${x.name} ${x.sku ?? ''}`.toLowerCase().includes(iq.toLowerCase()));
 
-  const add = (kind: 'service' | 'product', x: { id: string; name: string; price: number; taxRate: number }) => {
+  const add = (kind: 'service' | 'product', x: { id: string; name: string; price: number }) => {
     const existing = kind === 'product' && lines.find((l) => l.kind === 'product' && l.refId === x.id);
     if (existing) return setLines(lines.map((l) => (l === existing ? { ...l, qty: l.qty + 1 } : l)));
-    setLines([...lines, { key: `${Date.now()}${Math.random()}`, kind, refId: x.id, name: x.name, qty: 1, unitPrice: x.price, taxRate: x.taxRate, staffId: null }]);
+    setLines([...lines, { key: `${Date.now()}${Math.random()}`, kind, refId: x.id, name: x.name, qty: 1, unitPrice: x.price, staffId: null }]);
   };
   const update = (key: string, patch: Partial<PosLine>) => setLines(lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
   async function save() {
+    let cid = customerId;
+    if (newClient) {
+      const c = await run(() => saveCustomer(newClient), 'Client added');
+      if (!c) return;
+      setCustomers([...customers, c]);
+      setCustomerId(c.id);
+      setNewClient(null);
+      cid = c.id;
+    }
     const r = await run(() => createInvoice({
-      customerId, branchId: branchId || null, appointmentId: initial.appointmentId, notes,
+      customerId: cid, withGst, branchId: branchId || null, appointmentId: initial.appointmentId, notes,
       lines: lines.map((l) => ({ kind: l.kind, refId: l.refId, staffId: l.staffId, qty: l.qty, unitPrice: l.unitPrice })),
       discountType: discType, discountValue: Number(discValue) || 0,
       payments: payments.map((p) => ({ amount: Number(p.amount) || 0, method: p.method, reference: p.reference })),
@@ -74,7 +89,14 @@ export function PosForm({ customers, services, products, staff, branches, initia
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <span className="label">Client</span>
-              {customer ? (
+              {newClient ? (
+                <div className="grid grid-cols-2 gap-2 rounded-lg border border-line p-3">
+                  <Input placeholder="Full name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} aria-label="New client name" autoFocus />
+                  <Input placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} aria-label="New client mobile" />
+                  <p className="col-span-2 text-[12px] text-ink-mute">The client is saved when you save the bill.</p>
+                  <button type="button" onClick={() => setNewClient(null)} className="col-span-2 text-left text-[12.5px] text-plum-600 hover:underline">Choose an existing client instead</button>
+                </div>
+              ) : customer ? (
                 <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2">
                   <div><div className="font-medium">{customer.name}</div><div className="text-[12.5px] text-ink-mute">{customer.phone}</div></div>
                   {!initial.appointmentId && <Button size="sm" variant="ghost" onClick={() => setCustomerId('')}>Change</Button>}
@@ -82,14 +104,20 @@ export function PosForm({ customers, services, products, staff, branches, initia
               ) : (
                 <div className="relative">
                   <Input value={cq} onChange={(e) => setCq(e.target.value)} placeholder="Search name or mobile" aria-label="Search clients" />
-                  {cMatches.length > 0 && (
+                  {cq.trim() && (
                     <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-line bg-white shadow-lg">
                       {cMatches.map((c) => (
                         <li key={c.id}><button type="button" onClick={() => { setCustomerId(c.id); setCq(''); }} className="w-full px-3 py-2 text-left hover:bg-canvas"><span className="font-medium">{c.name}</span> <span className="text-ink-mute">{c.phone}</span></button></li>
                       ))}
+                      <li>
+                        <button type="button" className="w-full border-t border-line px-3 py-2 text-left font-medium text-plum-600 hover:bg-canvas"
+                          onClick={() => { const digits = /\d{4,}/.test(cq); setNewClient({ name: digits ? '' : cq.trim(), phone: digits ? cq.trim() : '' }); setCq(''); }}>
+                          + Add &quot;{cq.trim()}&quot; as a new client
+                        </button>
+                      </li>
                     </ul>
                   )}
-                  <p className="mt-1 text-[12px] text-ink-mute">New client? Add them on the Clients page first.</p>
+                  {!cq && <button type="button" onClick={() => setNewClient({ name: '', phone: '' })} className="mt-1 text-[12.5px] font-medium text-plum-600 hover:underline">+ New client</button>}
                 </div>
               )}
             </div>
@@ -107,7 +135,7 @@ export function PosForm({ customers, services, products, staff, branches, initia
                 <tbody>
                   {lines.map((l, i) => (
                     <tr key={l.key}>
-                      <td><div className="font-medium">{l.name}</div><div className="text-[12px] text-ink-mute">{l.kind === 'service' ? 'Service' : 'Product'} · GST {l.taxRate}%</div></td>
+                      <td><div className="font-medium">{l.name}</div><div className="text-[12px] text-ink-mute">{l.kind === 'service' ? 'Service' : 'Product'}</div></td>
                       <td>
                         {l.kind === 'service' ? (
                           <Select value={l.staffId ?? ''} onChange={(e) => update(l.key, { staffId: e.target.value || null })} aria-label="Done by" className="min-w-[140px] py-1.5">
@@ -161,7 +189,13 @@ export function PosForm({ customers, services, products, staff, branches, initia
               {discType && <Input type="number" min={0} value={discValue} onChange={(e) => setDiscValue(e.target.value)} className="py-1.5" aria-label="Discount value" />}
             </div>
             {bill.discount > 0 && <Row label="Discount" value={`− ${money(bill.discount)}`} />}
-            <Row label="GST" value={money(bill.tax)} />
+            <label className="flex items-center justify-between gap-2 border-t border-line pt-2">
+              <span className="flex items-center gap-2">
+                <input id="with-gst" type="checkbox" checked={withGst} onChange={(e) => setWithGst(e.target.checked)} className="h-4 w-4 accent-plum-600" />
+                <span className="text-ink-soft">Charge GST ({gstRate}%)</span>
+              </span>
+              <span className="tabular">{withGst ? money(bill.tax) : 'No GST'}</span>
+            </label>
             <div className="flex justify-between border-t border-line pt-2 text-[17px] font-semibold"><span>Total</span><span className="tabular">{money(bill.total)}</span></div>
           </div>
         </Card>
@@ -190,7 +224,7 @@ export function PosForm({ customers, services, products, staff, branches, initia
           </div>
         </Card>
         <Field label="Notes on the bill"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
-        <Button className="w-full py-2.5" disabled={pending || !customerId || !lines.length || due < -0.005} onClick={save}>{pending ? 'Saving…' : `Save bill · ${money(bill.total)}`}</Button>
+        <Button className="w-full py-2.5" disabled={pending || (!customerId && !newClient) || !lines.length || due < -0.005} onClick={save}>{pending ? 'Saving…' : `Save bill · ${money(bill.total)}`}</Button>
       </div>
     </div>
   );

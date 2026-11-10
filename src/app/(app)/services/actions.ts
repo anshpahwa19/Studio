@@ -12,7 +12,6 @@ const serviceSchema = z.object({
   categoryId: v.id,
   price: v.money,
   duration: z.coerce.number().int().min(5, 'must be at least 5 minutes').max(600),
-  taxRate: v.taxRate,
   description: v.optional(500),
 });
 export type ServiceInput = z.input<typeof serviceSchema>;

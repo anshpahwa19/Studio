@@ -14,7 +14,6 @@ const productSchema = z.object({
   supplier: v.optional(120),
   costPrice: v.money,
   price: v.money,
-  taxRate: v.taxRate,
   reorderLevel: z.coerce.number().int().min(0).max(100000),
   unit: v.required(10),
   openingStock: z.coerce.number().int().min(0).max(100000).optional(),
