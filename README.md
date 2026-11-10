@@ -36,6 +36,15 @@ To ship an installer without demo data, run `npm run setup:fresh` before `npm ru
 | `npm run setup:demo` | Wipes everything and reloads demo data |
 | `npm run setup:fresh` | Wipes everything and leaves only the owner login, business details and service categories |
 
+## Live version on Claude
+
+`live/salon-studio.html` is a browser version of the same app, published as a private Claude page:
+https://claude.ai/artifact/3zV9pfZXf9B2itec12Hmoe
+
+It has the same screens and billing rules and saves everything in the page's own shared database, so there is
+nothing to install. People get access from the page's Share menu: Contributors and Editors can book and bill,
+Viewers can only look. Its records are separate from the desktop app's database.
+
 ## What it does
 
 - **Today**: the day's schedule, money collected, dues, stock to reorder and a 14-day collections chart.
