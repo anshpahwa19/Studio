@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   ]);
   return (
     <>
-      <PageHeader title="Settings" subtitle="Business details, branches and who can sign in." />
+      <PageHeader title="Settings & Users" subtitle="Business details, branches and who can sign in." />
       <SettingsForms settings={settings} branches={branches} users={users} meId={me.id} />
     </>
   );

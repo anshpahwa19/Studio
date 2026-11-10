@@ -29,9 +29,9 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
   return (
     <>
       <PageHeader
-        title="Billing"
-        subtitle="Bills, payments and dues"
-        actions={<Link href="/billing/new" className="rounded-lg bg-plum-600 px-3.5 py-2 text-[13.5px] font-medium text-white hover:bg-plum-700">New bill</Link>}
+        title="Billing & Point of Sale (POS)"
+        subtitle="Fast billing counter, GST, split payments and receipts"
+        actions={<Link href="/billing/new" className="rounded-xl bg-violet-600 px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm hover:bg-violet-700">Create New Bill (POS)</Link>}
       />
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <Stat label="Bills shown" value={totals._count} note="Void bills excluded from totals" />

@@ -33,7 +33,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { cu
 
   return (
     <>
-      <PageHeader title="New bill" subtitle={appointment ? 'Billing a completed appointment. Services are filled in from the booking.' : `Prices are before GST. GST at ${settings.gstRate}% is added after any discount, or turn it off for this bill.`} />
+      <PageHeader title="Point of Sale (POS) Counter" subtitle={appointment ? 'Billing a completed appointment. Services are filled in from the booking.' : `Prices are before GST. GST at ${settings.gstRate}% is added after any discount, or turn it off for this bill.`} />
       <PosForm gstRate={settings.gstRate} customers={customers} services={services} products={products} staff={staff} branches={branches}
         initial={{ customerId, branchId, lines, appointmentId: appointment?.id ?? null }} />
     </>

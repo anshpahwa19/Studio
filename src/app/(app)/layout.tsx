@@ -2,34 +2,45 @@ import { currentUser } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { canView, type Area } from '@/lib/roles';
-import { Sidebar } from '@/components/sidebar';
+import { isoDate, plural } from '@/lib/format';
+import { Shell } from '@/components/sidebar';
 
 export const dynamic = 'force-dynamic';
 
 const NAV: { href: string; label: string; area: Area }[] = [
-  { href: '/dashboard', label: 'Today', area: 'dashboard' },
+  { href: '/dashboard', label: 'Dashboard', area: 'dashboard' },
   { href: '/appointments', label: 'Appointments', area: 'appointments' },
-  { href: '/billing', label: 'Billing', area: 'billing' },
-  { href: '/customers', label: 'Clients', area: 'customers' },
-  { href: '/services', label: 'Services', area: 'services' },
-  { href: '/staff', label: 'Staff', area: 'staff' },
-  { href: '/inventory', label: 'Inventory', area: 'inventory' },
+  { href: '/billing', label: 'Billing & POS', area: 'billing' },
+  { href: '/customers', label: 'Customers (CRM)', area: 'customers' },
+  { href: '/services', label: 'Services & Pricing', area: 'services' },
+  { href: '/staff', label: 'Staff Management', area: 'staff' },
+  { href: '/inventory', label: 'Inventory & Stock', area: 'inventory' },
   { href: '/expenses', label: 'Expenses', area: 'expenses' },
-  { href: '/reports', label: 'Reports', area: 'reports' },
-  { href: '/settings', label: 'Settings', area: 'settings' },
+  { href: '/reports', label: 'Reports & Analytics', area: 'reports' },
+  { href: '/settings', label: 'Settings & Users', area: 'settings' },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
   if (!user) redirect('/login');
-  const settings = await db.settings.findUnique({ where: { id: 1 }, select: { name: true } });
+  const billing = canView(user.role, 'billing');
+  const stock = canView(user.role, 'inventory');
+  const [settings, waiting, dues, products] = await Promise.all([
+    db.settings.findUnique({ where: { id: 1 }, select: { name: true } }),
+    db.appointment.count({ where: { date: isoDate(), status: 'CheckedIn' } }),
+    billing ? db.invoice.count({ where: { status: { in: ['Unpaid', 'Partial'] } } }) : 0,
+    stock ? db.product.findMany({ where: { active: true }, select: { stock: true, reorderLevel: true } }) : [],
+  ]);
+  const low = products.filter((p) => p.stock <= p.reorderLevel).length;
+  const alerts = [
+    ...(waiting ? [{ href: '/appointments', text: `${plural(waiting, 'client')} checked in and waiting`, tone: 'violet' as const }] : []),
+    ...(dues ? [{ href: '/billing', text: `${plural(dues, 'bill')} with money still due`, tone: 'amber' as const }] : []),
+    ...(low ? [{ href: '/inventory', text: `${plural(low, 'product')} to reorder`, tone: 'red' as const }] : []),
+  ];
   const items = NAV.filter((n) => canView(user.role, n.area)).map(({ href, label }) => ({ href, label }));
   return (
-    <div className="lg:flex">
-      <Sidebar items={items} salon={settings?.name ?? 'Salon'} user={{ name: user.name, role: user.role }} />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8">
-        <div className="mx-auto max-w-6xl">{children}</div>
-      </main>
-    </div>
+    <Shell items={items} salon={settings?.name ?? 'Salon'} user={{ name: user.name, role: user.role }} alerts={alerts} canBill={billing}>
+      {children}
+    </Shell>
   );
 }

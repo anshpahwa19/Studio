@@ -66,7 +66,7 @@ export function Planner(p: Props) {
   return (
     <>
       <PageHeader
-        title="Appointments"
+        title="Appointments & Scheduling"
         subtitle={`${title} · ${live.length} booked`}
         actions={p.editable && <Button onClick={() => setDraft(newDraft())}><Plus size={16} />Book appointment</Button>}
       />

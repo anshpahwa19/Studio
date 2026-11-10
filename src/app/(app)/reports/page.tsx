@@ -52,7 +52,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
   return (
     <>
       <PageHeader
-        title="Reports"
+        title="Reports & Analytics"
         subtitle={`${fmtDate(from)} to ${fmtDate(to)}`}
         actions={
           <>

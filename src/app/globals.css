@@ -5,21 +5,22 @@
 @layer base {
   html { -webkit-font-smoothing: antialiased; }
   body { @apply bg-canvas text-ink font-sans text-[14px]; }
+  ::selection { @apply bg-violet-100 text-violet-800; }
   h1, h2, h3 { text-wrap: balance; }
-  :focus-visible { @apply outline-none ring-2 ring-plum-500/40 ring-offset-1; }
+  :focus-visible { @apply outline-none ring-2 ring-violet-500/40 ring-offset-1; }
   .tabular { font-variant-numeric: tabular-nums; }
 }
 
 @layer components {
   .input {
-    @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink placeholder:text-ink-mute/70
-      focus:border-plum-500 focus:outline-none focus:ring-2 focus:ring-plum-500/20 disabled:bg-canvas disabled:text-ink-mute;
+    @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-[14px] text-ink placeholder:text-ink-mute/70
+      focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:bg-canvas disabled:text-ink-mute;
   }
-  .label { @apply mb-1 block text-[12px] font-medium text-ink-soft; }
-  .card { @apply rounded-xl border border-line bg-white; }
+  .label { @apply mb-1.5 block text-[13px] font-semibold text-ink-soft; }
+  .card { @apply min-w-0 rounded-2xl border border-line bg-white shadow-card; }
   .table { @apply w-full text-left text-[13.5px]; }
-  .table th { @apply border-b border-line bg-canvas/60 px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-wide text-ink-mute; }
-  .table td { @apply border-b border-line/70 px-4 py-3 align-middle; }
+  .table th { @apply border-b border-line bg-white px-5 py-3.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-soft; }
+  .table td { @apply border-b border-line px-5 py-4 align-middle; }
   .table tr:last-child td { @apply border-b-0; }
 }
 

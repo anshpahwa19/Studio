@@ -14,7 +14,7 @@ export default async function ServicesPage() {
   const count = categories.reduce((a, c) => a + c.services.length, 0);
   return (
     <>
-      <PageHeader title="Services" subtitle={`${plural(count, 'service')} in ${plural(categories.length, 'category', 'categories')}. Prices are before GST, which is set in Settings.`} />
+      <PageHeader title="Services & Pricing" subtitle={`${plural(count, 'service')} in ${plural(categories.length, 'category', 'categories')}. Prices are before GST, which is set in Settings.`} />
       <ServiceManager categories={categories} editable={canEdit(user.role, 'services')} />
     </>
   );

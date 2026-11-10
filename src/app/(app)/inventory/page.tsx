@@ -11,7 +11,7 @@ export default async function InventoryPage() {
   const value = products.reduce((a, p) => a + p.stock * p.costPrice, 0);
   return (
     <>
-      <PageHeader title="Inventory" subtitle="Retail products and salon supplies. Sales on bills reduce stock automatically." />
+      <PageHeader title="Inventory & Stock" subtitle="Retail products and salon supplies. Sales on bills reduce stock automatically." />
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <Stat label="Products" value={products.length} />
         <Stat label="Need reordering" value={low} tone={low ? 'warn' : 'good'} note="At or below reorder level" />
