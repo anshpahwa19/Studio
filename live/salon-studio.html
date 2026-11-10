@@ -1,0 +1,1140 @@
+<title>Salon Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: fixed left menu with the salon's name, one working screen at a time; menu becomes a top bar on phones */
+:root {
+  --bg: #f7f5f8; --surface: #ffffff; --ink: #1f1b24; --soft: #4a4452; --mute: #7a7383; --line: #e7e3ea;
+  --accent: #74335f; --accent-ink: #ffffff; --accent-soft: #f7f0f5; --accent-line: #dcbad3; --brass: #a8813f;
+  --good: #1f7a4d; --good-soft: #e8f5ee; --warn: #9a5b00; --warn-soft: #fdf3e2; --bad: #b42318; --bad-soft: #fdeceb;
+  --info: #155e86; --info-soft: #e8f3fa;
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #16131a; --surface: #201c25; --ink: #f1edf4; --soft: #cbc4d3; --mute: #9a93a5; --line: #352f3d;
+  --accent: #d48fbd; --accent-ink: #1d0f18; --accent-soft: #33212e; --accent-line: #5a3a50; --brass: #d0ab6a;
+  --good: #6fd3a0; --good-soft: #17301f; --warn: #f0b860; --warn-soft: #33270f; --bad: #ff8a80; --bad-soft: #3a1b19;
+  --info: #7cc4ef; --info-soft: #132a38; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #16131a; --surface: #201c25; --ink: #f1edf4; --soft: #cbc4d3; --mute: #9a93a5; --line: #352f3d;
+  --accent: #d48fbd; --accent-ink: #1d0f18; --accent-soft: #33212e; --accent-line: #5a3a50; --brass: #d0ab6a;
+  --good: #6fd3a0; --good-soft: #17301f; --warn: #f0b860; --warn-soft: #33270f; --bad: #ff8a80; --bad-soft: #3a1b19;
+  --info: #7cc4ef; --info-soft: #132a38; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.tab { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.app { display: flex; min-height: 100%; }
+.side { width: 232px; flex-shrink: 0; border-right: 1px solid var(--line); background: var(--surface); position: sticky; top: env(safe-area-inset-top, 0px); height: 100vh; display: flex; flex-direction: column; }
+.brand { padding: 24px 20px 16px; }
+.eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--brass); }
+.salon { font-family: var(--display); font-size: 17px; margin-top: 4px; line-height: 1.3; }
+.nav { flex: 1; overflow-y: auto; padding: 0 12px; display: grid; gap: 2px; align-content: start; }
+.nav a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--soft); text-decoration: none; font-weight: 500; }
+.nav a:hover { background: var(--bg); color: var(--ink); }
+.nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.side-foot { border-top: 1px solid var(--line); padding: 14px 20px; font-size: 12.5px; color: var(--mute); }
+.topbar { display: none; }
+main { flex: 1; min-width: 0; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+@media (max-width: 860px) {
+  .side { display: none; }
+  .side.open { display: flex; position: fixed; inset: 0 auto 0 0; z-index: 40; height: 100%; box-shadow: 0 0 40px rgb(0 0 0 / .25); }
+  .topbar { display: flex; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; align-items: center; justify-content: space-between; background: var(--surface); border-bottom: 1px solid var(--line); padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 31; background: var(--surface); }
+  .app { display: block; }
+  main { padding-block: 20px 40px; }
+  .wrap { padding: 0; }
+}
+
+.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; margin-bottom: 20px; }
+.head h1 { font-family: var(--display); font-weight: 500; font-size: 28px; line-height: 1.15; }
+.sub { color: var(--mute); margin-top: 4px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.grid { display: grid; gap: 16px; }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.g2 { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+.gside { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+@media (max-width: 980px) { .g2, .gside { grid-template-columns: minmax(0, 1fr); } }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+.card > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--line); }
+.card > header h2 { font-size: 14.5px; font-weight: 600; }
+.pad { padding: 18px; }
+.stat { padding: 15px 18px; }
+.stat .k { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+.stat .v { font-size: 24px; font-weight: 600; margin-top: 4px; }
+.stat .n { font-size: 12.5px; color: var(--mute); }
+.v.warn { color: var(--warn); } .v.good { color: var(--good); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); padding: 8px 14px; font-weight: 500; cursor: pointer; text-decoration: none; }
+.btn:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.sec { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn.sec:hover { background: var(--bg); filter: none; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--soft); }
+.btn.ghost:hover { background: var(--bg); color: var(--ink); filter: none; }
+.btn.danger { background: var(--surface); color: var(--bad); border-color: var(--bad-soft); }
+.btn.sm { padding: 4px 10px; font-size: 12.5px; }
+.link { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 500; cursor: pointer; text-align: left; }
+.link:hover { text-decoration: underline; }
+
+label.f { display: block; min-width: 0; }
+label.f > span { display: block; font-size: 12px; font-weight: 500; color: var(--soft); margin-bottom: 4px; }
+label.f > small { display: block; font-size: 11.5px; color: var(--mute); margin-top: 3px; }
+.in { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.in:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+textarea.in { resize: vertical; min-height: 56px; }
+.form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.form .full { grid-column: 1 / -1; }
+@media (max-width: 520px) { .form { grid-template-columns: minmax(0, 1fr); } }
+.check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--mute); padding: 9px 14px; border-bottom: 1px solid var(--line); background: var(--bg); white-space: nowrap; }
+td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tr.click { cursor: pointer; } tr.click:hover td { background: var(--bg); }
+.r { text-align: right; }
+.m { color: var(--mute); font-size: 12.5px; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { padding: 11px 18px; border-bottom: 1px solid var(--line); }
+.list > li:last-child { border-bottom: 0; }
+.empty { padding: 36px 20px; text-align: center; color: var(--mute); }
+.empty b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; }
+.b-plum { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+.b-good { background: var(--good-soft); color: var(--good); }
+.b-warn { background: var(--warn-soft); color: var(--warn); }
+.b-bad { background: var(--bad-soft); color: var(--bad); }
+.b-info { background: var(--info-soft); color: var(--info); }
+.b-gray { background: var(--bg); color: var(--mute); border-color: var(--line); }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; color: var(--soft); font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+.overlay { position: fixed; inset: 0; z-index: 50; background: rgb(20 12 20 / .45); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
+.dialog { background: var(--surface); border-radius: 14px; width: 100%; max-width: 560px; margin-top: 4vh; box-shadow: 0 24px 60px rgb(0 0 0 / .3); }
+.dialog.wide { max-width: 860px; }
+.dialog > header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.dialog > header h2 { font-size: 15.5px; font-weight: 600; }
+.x { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--mute); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.dialog .body { padding: 18px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+.toasts { position: fixed; z-index: 60; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; max-width: 340px; box-shadow: 0 8px 24px rgb(0 0 0 / .2); }
+.toast.err { background: var(--bad); color: #fff; }
+.notice { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
+
+/* Day planner */
+.planner { overflow-x: auto; }
+.pl-grid { display: flex; }
+.pl-times { width: 60px; flex-shrink: 0; border-right: 1px solid var(--line); }
+.pl-col { flex: 1; min-width: 160px; border-right: 1px solid var(--line); }
+.pl-col:last-child { border-right: 0; }
+.pl-head { height: 50px; border-bottom: 1px solid var(--line); padding: 7px 12px; }
+.pl-head b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-body { position: relative; }
+.pl-body.off { background: repeating-linear-gradient(135deg, var(--bg), var(--bg) 6px, var(--line) 6px, var(--line) 7px); }
+.pl-hour { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); pointer-events: none; }
+.pl-tl { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--mute); }
+.blk { position: absolute; left: 4px; right: 4px; border-radius: 7px; border: 1px solid; padding: 3px 8px; text-align: left; overflow: hidden; cursor: pointer; font-size: 12px; line-height: 1.3; }
+.blk b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blk span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .85; }
+.s-Booked { background: var(--info-soft); color: var(--info); border-color: var(--info); }
+.s-CheckedIn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.s-InService { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+.s-Completed { background: var(--good-soft); color: var(--good); border-color: var(--good); }
+.s-Cancelled, .s-NoShow { background: var(--bg); color: var(--mute); border-color: var(--line); text-decoration: line-through; }
+
+.picker { position: relative; }
+.drop { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 30px rgb(0 0 0 / .15); overflow: hidden; }
+.drop button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 12px; cursor: pointer; }
+.drop button:hover { background: var(--bg); }
+.chosen { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; max-height: 280px; overflow-y: auto; }
+.catalog button { display: flex; justify-content: space-between; gap: 8px; align-items: center; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.catalog button:hover { border-color: var(--accent-line); background: var(--accent-soft); }
+.catalog button:disabled { opacity: .4; cursor: not-allowed; }
+.sumrow { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; font-size: 17px; font-weight: 600; }
+.due { margin-top: 10px; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; font-weight: 500; }
+.bar { height: 6px; border-radius: 999px; background: var(--bg); margin-top: 4px; }
+.bar i { display: block; height: 6px; border-radius: 999px; background: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.day { padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 12.5px; }
+.day[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.sheet { max-width: 760px; margin: 0 auto; }
+.inv-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.inv-head .nm { font-family: var(--display); font-size: 22px; }
+</style>
+
+<div id="app"><div style="padding:40px;color:#7a7383;font-family:ui-sans-serif,system-ui,sans-serif">Opening Salon Studio…</div></div>
+
+<script src="https://unpkg.com/htm@3.1.1/preact/standalone.umd.js"></script>
+<script>
+const { html, render, useState, useEffect, useMemo, useRef } = htmPreact;
+
+// ───────────────────────── helpers ─────────────────────────
+const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
+const inr0 = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const money = (n) => inr.format(n || 0);
+const money0 = (n) => inr0.format(Math.round(n || 0));
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+const pad = (n) => String(n).padStart(2, '0');
+const isoDate = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseDate = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseDate(s); d.setDate(d.getDate() + n); return isoDate(d); };
+const weekStart = (s) => addDays(s, -((parseDate(s).getDay() + 6) % 7));
+const monthStart = (s) => s.slice(0, 8) + '01';
+const monthEnd = (s) => { const d = parseDate(monthStart(s)); return isoDate(new Date(d.getFullYear(), d.getMonth() + 1, 0)); };
+const fmtDate = (s, o = { day: 'numeric', month: 'short', year: 'numeric' }) => (s.length === 10 ? parseDate(s) : new Date(s)).toLocaleDateString('en-IN', o);
+const fmtDT = (s) => new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const fromMin = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+const fmtTime = (t) => { const m = toMin(t), h = Math.floor(m / 60); return `${h % 12 || 12}:${pad(m % 60)} ${h >= 12 ? 'PM' : 'AM'}`; };
+const fmtDur = (m) => { const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}h ${r}m` : `${h}h`) : `${r}m`; };
+const plural = (n, w, many = w + 's') => `${n} ${n === 1 ? w : many}`;
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const METHODS = ['Cash', 'UPI', 'Card', 'Bank'];
+const GST_RATES = [5, 12, 18, 28];
+const byName = (a, b) => (a.name || '').localeCompare(b.name || '');
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const digits = (s) => (s || '').replace(/\D/g, '');
+
+// Prices are before GST. A bill discount is shared across lines by value; GST is charged after it.
+function computeBill(lines, type, value) {
+  const gross = lines.map((l) => round2(l.qty * l.unitPrice));
+  const subtotal = round2(gross.reduce((a, b) => a + b, 0));
+  let disc = 0;
+  if (type === 'percent') disc = (subtotal * Math.min(Math.max(value, 0), 100)) / 100;
+  if (type === 'amount') disc = Math.min(Math.max(value, 0), subtotal);
+  disc = round2(disc);
+  let given = 0;
+  const out = lines.map((l, i) => {
+    const last = i === lines.length - 1;
+    const share = subtotal > 0 ? (last ? round2(disc - given) : round2((disc * gross[i]) / subtotal)) : 0;
+    given = round2(given + share);
+    const taxable = round2(gross[i] - share);
+    const tax = round2((taxable * l.taxRate) / 100);
+    return { ...l, discount: share, tax, total: round2(taxable + tax) };
+  });
+  const tax = round2(out.reduce((a, l) => a + l.tax, 0));
+  return { lines: out, subtotal, discount: disc, tax, total: round2(subtotal - disc + tax) };
+}
+const invStatus = (total, paid) => (paid <= 0 ? (total <= 0 ? 'Paid' : 'Unpaid') : paid + 0.005 >= total ? 'Paid' : 'Partial');
+
+// ───────────────────────── data ─────────────────────────
+const COLS = ['customers', 'staff', 'services', 'products', 'appointments', 'invoices', 'expenses'];
+const DEFAULT_SETTINGS = { name: 'Shruti Pahwa Luxury Salon & Academy', address: '', phone: '', email: '', gstin: '', gstRate: 5, openTime: '09:00', closeTime: '21:00', invoicePrefix: 'SP', nextInvoiceNo: 1001, footer: 'Thank you for visiting us.' };
+let DB = null;
+let canWrite = null; // null = not told yet
+const listeners = new Set();
+const store = { ready: false, offline: false, readOnly: false, settings: DEFAULT_SETTINGS, ...Object.fromEntries(COLS.map((c) => [c, []])) };
+const emit = () => listeners.forEach((f) => f({ ...store }));
+function useStore() {
+  const [s, set] = useState({ ...store });
+  // Catch up on anything that arrived before this screen subscribed.
+  useEffect(() => { listeners.add(set); set({ ...store }); return () => listeners.delete(set); }, []);
+  return s;
+}
+
+async function startData() {
+  const timer = setTimeout(() => { store.offline = true; emit(); }, 10000);
+  DB = await window.claude?.use?.('db').catch(() => null);
+  if (!DB) { clearTimeout(timer); store.offline = true; store.ready = true; emit(); return; }
+  const user = await window.claude.use('user').catch(() => null);
+  if (user) user.can('data.write').then((v) => { canWrite = v; if (v === false) { store.readOnly = true; emit(); } }).catch(() => {});
+  let pending = COLS.length + 1;
+  const loaded = (snap) => { if (!snap.metadata.fromCache && --pending <= 0) { clearTimeout(timer); store.offline = false; } };
+  for (const c of COLS) {
+    let first = true;
+    DB.collection(c).onSnapshot((snap) => {
+      store[c] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (first && !snap.metadata.fromCache) { first = false; loaded(snap); }
+      store.ready = true; emit();
+    }, () => { store.offline = true; emit(); });
+  }
+  let firstS = true;
+  DB.doc('config/settings').onSnapshot((snap) => {
+    store.settings = { ...DEFAULT_SETTINGS, ...(snap.data() || {}) };
+    if (firstS && !snap.metadata.fromCache) { firstS = false; loaded(snap); }
+    emit();
+  }, () => {});
+}
+
+class Problem extends Error {}
+async function write(fn, ok) {
+  if (!DB) return toast('Saving is not available here. Open this page in Claude to make changes.', true), false;
+  if (store.readOnly) return toast('You can view this page but not change it. Ask the owner for Contributor access.', true), false;
+  try {
+    const r = await fn();
+    if (ok) toast(ok);
+    return r === undefined ? true : r;
+  } catch (e) {
+    if (e instanceof Problem) toast(e.message, true);
+    else if (e && e.code === 'invalid_argument' && canWrite !== true) { store.readOnly = true; emit(); toast('You can view this page but not change it.', true); }
+    else if (e && e.code === 'quota_exceeded') toast('The salon database is full. Remove old records before adding more.', true);
+    else toast('Could not save. Check your connection and try again.', true);
+    return false;
+  }
+}
+const put = (c, id, data) => DB.doc(`${c}/${id}`).set(data);
+const patch = (c, id, data) => DB.doc(`${c}/${id}`).update(data);
+const strip = (o) => { const { id, ...rest } = o; return rest; };
+
+// ───────────────────────── toasts ─────────────────────────
+let pushToast = () => {};
+const toast = (text, err) => pushToast({ text, err, id: newId() });
+function Toasts() {
+  const [items, set] = useState([]);
+  useEffect(() => { pushToast = (t) => { set((s) => [...s, t]); setTimeout(() => set((s) => s.filter((x) => x.id !== t.id)), t.err ? 6000 : 3000); }; }, []);
+  return html`<div class="toasts" role="status" aria-live="polite">${items.map((t) => html`<div key=${t.id} class=${'toast' + (t.err ? ' err' : '')}>${t.text}</div>`)}</div>`;
+}
+
+// ───────────────────────── small UI ─────────────────────────
+const Head = ({ title, sub, children }) => html`<div class="head"><div style="min-width:0"><h1>${title}</h1>${sub && html`<div class="sub">${sub}</div>`}</div>${children && html`<div class="row">${children}</div>`}</div>`;
+const Card = ({ title, actions, children, pad: p = true, style }) => html`<section class="card" style=${style}>${(title || actions) && html`<header><h2>${title}</h2>${actions}</header>`}${p ? html`<div class="pad">${children}</div>` : children}</section>`;
+const Stat = ({ k, v, n, tone }) => html`<div class="card stat"><div class="k">${k}</div><div class=${'v tab ' + (tone || '')}>${v}</div>${n && html`<div class="n">${n}</div>`}</div>`;
+const Empty = ({ title, children }) => html`<div class="empty"><b>${title}</b>${children}</div>`;
+const F = ({ label, hint, full, children }) => html`<label class=${'f' + (full ? ' full' : '')}><span>${label}</span>${children}${hint && html`<small>${hint}</small>`}</label>`;
+function Modal({ title, wide, onClose, children }) {
+  useEffect(() => { const k = (e) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, []);
+  return html`<div class="overlay" onMouseDown=${onClose}><div class=${'dialog' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label=${title} onMouseDown=${(e) => e.stopPropagation()}>
+    <header><h2>${title}</h2><button class="x" aria-label="Close" onClick=${onClose}>×</button></header><div class="body">${children}</div></div></div>`;
+}
+const APPT = { Booked: ['b-info', 'Booked'], CheckedIn: ['b-warn', 'Checked in'], InService: ['b-plum', 'In service'], Completed: ['b-good', 'Completed'], Cancelled: ['b-gray', 'Cancelled'], NoShow: ['b-bad', 'No-show'] };
+const ApptBadge = ({ s }) => html`<span class=${'badge ' + (APPT[s] || ['b-gray'])[0]}>${(APPT[s] || [0, s])[1]}</span>`;
+const INV = { Paid: 'b-good', Partial: 'b-warn', Unpaid: 'b-bad', Void: 'b-gray' };
+const InvBadge = ({ s }) => html`<span class=${'badge ' + INV[s]}>${s === 'Partial' ? 'Part paid' : s}</span>`;
+
+function BarChart({ data, height = 180 }) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const p = Math.pow(10, Math.floor(Math.log10(max)));
+  const nice = [1, 2, 2.5, 5, 10].map((m) => m * p).find((v) => v >= max) || max;
+  const W = 640, H = height, L = 52, B = 22, T = 10, ph = H - B - T, bw = (W - L) / data.length;
+  const short = (n) => (n >= 100000 ? `₹${+(n / 100000).toFixed(1)}L` : n >= 1000 ? `₹${+(n / 1000).toFixed(1)}k` : `₹${n}`);
+  const every = Math.ceil(data.length / 12);
+  return html`<svg viewBox=${`0 0 ${W} ${H}`} style="width:100%;height:auto" role="img" aria-label="Bar chart">
+    ${[0, 0.5, 1].map((t) => { const y = T + ph - t * ph; return html`<g><line x1=${L} x2=${W} y1=${y} y2=${y} stroke="var(--line)" /><text x=${L - 8} y=${y + 4} text-anchor="end" font-size="11" fill="var(--mute)">${short(t * nice)}</text></g>`; })}
+    ${data.map((d, i) => { const h = (d.value / nice) * ph, x = L + i * bw + bw * 0.18; return html`<g>
+      <rect x=${x} y=${T + ph - h} width=${bw * 0.64} height=${Math.max(h, d.value ? 1 : 0)} rx="3" fill="var(--accent)"><title>${d.label}: ${money0(d.value)}</title></rect>
+      ${i % every === 0 && html`<text x=${x + bw * 0.32} y=${H - 6} text-anchor="middle" font-size="11" fill="var(--mute)">${d.label}</text>`}</g>`; })}
+  </svg>`;
+}
+
+function ClientPicker({ customers, value, onChange, newClient, setNewClient, locked }) {
+  const [q, setQ] = useState('');
+  const c = customers.find((x) => x.id === value);
+  const t = q.trim().toLowerCase();
+  const hits = t ? customers.filter((x) => x.name.toLowerCase().includes(t) || (digits(t) && digits(x.phone).includes(digits(t)))).slice(0, 6) : [];
+  if (newClient) return html`<div class="form" style="border:1px solid var(--line);border-radius:8px;padding:12px">
+    <input class="in" id="nc-name" placeholder="Full name" aria-label="New client name" value=${newClient.name} onInput=${(e) => setNewClient({ ...newClient, name: e.target.value })} />
+    <input class="in" id="nc-phone" placeholder="Mobile number" aria-label="New client mobile" value=${newClient.phone} onInput=${(e) => setNewClient({ ...newClient, phone: e.target.value })} />
+    <button type="button" class="link full" onClick=${() => setNewClient(null)}>Choose an existing client instead</button></div>`;
+  if (c) return html`<div class="chosen"><div><b>${c.name}</b><div class="m">${c.phone}</div></div>${!locked && html`<button type="button" class="btn ghost sm" onClick=${() => onChange('')}>Change</button>`}</div>`;
+  return html`<div class="picker">
+    <input class="in" id="client-search" placeholder="Search name or mobile" aria-label="Search clients" value=${q} onInput=${(e) => setQ(e.target.value)} />
+    ${t && html`<div class="drop">${hits.map((x) => html`<button type="button" onClick=${() => { onChange(x.id, x); setQ(''); }}><b>${x.name}</b> <span class="m">${x.phone}</span></button>`)}
+      <button type="button" style="border-top:1px solid var(--line);color:var(--accent);font-weight:500" onClick=${() => { const d = /\d{4,}/.test(q); setNewClient({ name: d ? '' : q.trim(), phone: d ? q.trim() : '' }); setQ(''); }}>+ Add "${q.trim()}" as a new client</button></div>`}
+    ${!t && html`<button type="button" class="link" style="margin-top:6px;font-size:12.5px" onClick=${() => setNewClient({ name: '', phone: '' })}>+ New client</button>`}
+  </div>`;
+}
+
+async function createClient(nc, customers) {
+  const name = nc.name.trim(), phone = nc.phone.trim();
+  if (!name) throw new Problem('Enter the new client\'s name.');
+  if (digits(phone).length < 7) throw new Problem('Enter a valid mobile number for the new client.');
+  if (customers.some((c) => digits(c.phone) === digits(phone))) throw new Problem('A client with that mobile number already exists. Search for them instead.');
+  const id = newId();
+  const doc = { name, phone, email: '', notes: '', hairNotes: '', nailNotes: '', createdAt: new Date().toISOString(), active: true };
+  await put('customers', id, doc);
+  return { id, ...doc };
+}
+
+// ───────────────────────── Today ─────────────────────────
+function Today({ s, go }) {
+  const today = isoDate();
+  const appts = s.appointments.filter((a) => a.date === today).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const live = s.invoices.filter((i) => i.status !== 'Void');
+  const pays = live.flatMap((i) => (i.payments || []).map((p) => ({ ...p, inv: i })));
+  const byDay = {};
+  pays.forEach((p) => { const d = isoDate(new Date(p.at)); byDay[d] = (byDay[d] || 0) + p.amount; });
+  const from = addDays(today, -13);
+  const chart = Array.from({ length: 14 }, (_, i) => addDays(from, i)).map((d) => ({ label: fmtDate(d, { day: 'numeric', month: 'short' }), value: byDay[d] || 0 }));
+  const month = pays.filter((p) => isoDate(new Date(p.at)) >= monthStart(today)).reduce((a, p) => a + p.amount, 0);
+  const owing = live.filter((i) => i.status !== 'Paid');
+  const dues = owing.reduce((a, i) => a + i.total - i.paid, 0);
+  const low = s.products.filter((p) => p.active !== false && p.stock <= p.reorderLevel).length;
+  const staff = Object.fromEntries(s.staff.map((x) => [x.id, x.name]));
+  const cust = Object.fromEntries(s.customers.map((x) => [x.id, x.name]));
+  const recent = pays.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6);
+  const hr = new Date().getHours();
+  return html`
+    <${Head} title=${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'} sub=${fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}>
+      <button class="btn sec" onClick=${() => go('appointments', { book: {} })}>Book appointment</button>
+      <button class="btn" onClick=${() => go('newbill')}>New bill</button>
+    <//>
+    <div class="grid g4" style="margin-bottom:16px">
+      <${Stat} k="Appointments today" v=${appts.filter((a) => !['Cancelled', 'NoShow'].includes(a.status)).length} n=${`${appts.filter((a) => a.status === 'Completed').length} done · ${appts.filter((a) => ['CheckedIn', 'InService'].includes(a.status)).length} in the salon now`} />
+      <${Stat} k="Collected today" v=${money0(byDay[today])} n=${`${money0(month)} this month`} />
+      <${Stat} k="Dues to collect" v=${money0(dues)} n=${`${plural(owing.length, 'bill')} not fully paid`} tone=${dues > 0.5 ? 'warn' : ''} />
+      <${Stat} k="Products to reorder" v=${low} n="At or below reorder level" tone=${low ? 'warn' : 'good'} />
+    </div>
+    <div class="grid g2">
+      <${Card} title="Today's schedule" pad=${false} actions=${html`<button class="link" onClick=${() => go('appointments')}>Open planner</button>`}>
+        ${appts.length ? html`<ul class="list">${appts.map((a) => html`<li class="row" style="flex-wrap:nowrap;gap:14px">
+          <b class="tab" style="width:64px;flex-shrink:0">${fmtTime(a.startTime)}</b>
+          <div style="flex:1;min-width:0"><div>${cust[a.customerId] || 'Client'}</div><div class="m" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.services.map((x) => x.name).join(', ')} · ${staff[a.staffId] || ''}</div></div>
+          <${ApptBadge} s=${a.status} /></li>`)}</ul>` : html`<${Empty} title="Nothing booked today">Book an appointment or add a walk-in from the planner.<//>`}
+      <//>
+      <div class="grid" style="align-content:start">
+        <${Card} title="Collections, last 14 days"><${BarChart} data=${chart} /><//>
+        <${Card} title="Latest payments" pad=${false}>
+          ${recent.length ? html`<ul class="list">${recent.map((p) => html`<li class="row" style="justify-content:space-between;flex-wrap:nowrap">
+            <div style="min-width:0"><div>${cust[p.inv.customerId] || p.inv.customerName}</div><div class="m">${p.inv.number} · ${p.method} · ${fmtDT(p.at)}</div></div><b class="tab">${money0(p.amount)}</b></li>`)}</ul>` : html`<${Empty} title="No payments yet">They appear here as bills are paid.<//>`}
+        <//>
+      </div>
+    </div>`;
+}
+
+// ───────────────────────── Appointments ─────────────────────────
+const PX = 1.1;
+function Appointments({ s, go, params }) {
+  const [date, setDate] = useState(isoDate());
+  const [view, setView] = useState('day');
+  const [sel, setSel] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const staff = s.staff.filter((x) => x.active !== false).sort(byName);
+  const hours = { open: s.settings.openTime, close: s.settings.closeTime };
+  const cust = Object.fromEntries(s.customers.map((x) => [x.id, x]));
+  const nextSlot = () => { if (date !== isoDate()) return hours.open; const n = new Date(); return fromMin(Math.min(Math.max(Math.ceil((n.getHours() * 60 + n.getMinutes()) / 15) * 15, toMin(hours.open)), 23 * 60)); };
+  const blank = (o = {}) => ({ customerId: '', staffId: staff[0]?.id || '', date, startTime: nextSlot(), serviceIds: [], walkIn: false, notes: '', ...o });
+  useEffect(() => { if (params && params.book) { const c = cust[params.book.customerId]; setDraft(blank({ customerId: c?.id || '', staffId: c?.preferredStaffId || staff[0]?.id || '' })); } }, [params]);
+  const step = view === 'week' ? 7 : 1;
+  const ws = weekStart(date);
+  const from = view === 'week' ? ws : date, to = view === 'week' ? addDays(ws, 6) : date;
+  const list = s.appointments.filter((a) => a.date >= from && a.date <= to).sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+  const live = list.filter((a) => !['Cancelled', 'NoShow'].includes(a.status));
+  const title = view === 'week' ? `${fmtDate(ws, { day: 'numeric', month: 'short' })} – ${fmtDate(addDays(ws, 6))}` : fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  return html`
+    <${Head} title="Appointments" sub=${`${title} · ${live.length} booked`}><button class="btn" onClick=${() => setDraft(blank())} disabled=${!staff.length}>+ Book appointment</button><//>
+    <div class="row" style="margin-bottom:14px">
+      <div class="seg"><button aria-label="Previous" onClick=${() => setDate(addDays(date, -step))}>‹</button><button onClick=${() => setDate(isoDate())}>Today</button><button aria-label="Next" onClick=${() => setDate(addDays(date, step))}>›</button></div>
+      <input type="date" class="in" id="ap-date" style="width:auto" value=${date} onInput=${(e) => e.target.value && setDate(e.target.value)} aria-label="Go to date" />
+      <div class="seg" style="margin-left:auto">${['day', 'week'].map((v) => html`<button aria-pressed=${view === v} onClick=${() => setView(v)} style="text-transform:capitalize">${v}</button>`)}</div>
+    </div>
+    ${!staff.length ? html`<${Card}><${Empty} title="No stylists yet">Add your team on the Staff screen before booking.<//><//>`
+      : view === 'day' ? html`<${DayGrid} s=${s} date=${date} staff=${staff} hours=${hours} list=${list} cust=${cust} onOpen=${setSel} onSlot=${(staffId, startTime) => setDraft(blank({ staffId, startTime }))} />`
+      : html`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">${Array.from({ length: 7 }, (_, i) => addDays(ws, i)).map((d) => { const dl = list.filter((a) => a.date === d); return html`<section class="card">
+          <header style="cursor:pointer" onClick=${() => { setDate(d); setView('day'); }}><h2>${fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })}</h2><span class="m">${dl.filter((a) => !['Cancelled', 'NoShow'].includes(a.status)).length} booked</span></header>
+          ${dl.length ? html`<ul class="list">${dl.map((a) => html`<li style="cursor:pointer" onClick=${() => setSel(a)}><div class="row" style="justify-content:space-between"><b class="tab">${fmtTime(a.startTime)}</b><${ApptBadge} s=${a.status} /></div><div>${cust[a.customerId]?.name || 'Client'}</div><div class="m">${s.staff.find((x) => x.id === a.staffId)?.name || ''}</div></li>`)}</ul>` : html`<div class="pad m">No appointments</div>`}</section>`; })}</div>`}
+    ${sel && html`<${ApptDetail} s=${s} a=${s.appointments.find((x) => x.id === sel.id) || sel} cust=${cust} staff=${s.staff} go=${go} onClose=${() => setSel(null)} />`}
+    ${draft && html`<${Modal} title="Book appointment" wide onClose=${() => setDraft(null)}><${BookingForm} s=${s} initial=${draft} staff=${staff} onDone=${(d) => { setDraft(null); if (d) setDate(d); }} /><//>`}`;
+}
+
+function DayGrid({ date, staff, hours, list, cust, onOpen, onSlot }) {
+  const open = toMin(hours.open), close = toMin(hours.close), H = (close - open) * PX, dow = parseDate(date).getDay();
+  const hrs = []; for (let m = Math.ceil(open / 60) * 60; m <= close; m += 60) hrs.push(m);
+  return html`<div class="card planner"><div class="pl-grid" style=${`min-width:${60 + staff.length * 160}px`}>
+    <div class="pl-times"><div class="pl-head"></div><div class="pl-body" style=${`height:${H}px`}>${hrs.map((m) => html`<div class="pl-tl" style=${`top:${(m - open) * PX}px`}>${fmtTime(fromMin(m)).replace(':00', '')}</div>`)}</div></div>
+    ${staff.map((st) => { const works = (st.workDays || []).includes(dow); return html`<div class="pl-col">
+      <div class="pl-head"><b>${st.name}</b><span class="m">${works ? `${fmtTime(st.startTime)} – ${fmtTime(st.endTime)}` : 'Day off'}</span></div>
+      <div class=${'pl-body' + (works ? '' : ' off')} style=${`height:${H}px;cursor:${works ? 'copy' : 'default'}`} onClick=${(e) => { if (!works || e.target !== e.currentTarget) return; onSlot(st.id, fromMin(open + Math.floor(e.offsetY / PX / 15) * 15)); }}>
+        ${hrs.map((m) => html`<div class="pl-hour" style=${`top:${(m - open) * PX}px`}></div>`)}
+        ${list.filter((a) => a.staffId === st.id).map((a) => { const h = Math.max(24, (toMin(a.endTime) - toMin(a.startTime)) * PX - 2); return html`<button class=${'blk s-' + a.status} style=${`top:${(toMin(a.startTime) - open) * PX}px;height:${h}px`} onClick=${() => onOpen(a)}>
+          <b>${cust[a.customerId]?.name || 'Client'}</b>${h > 34 && html`<span>${fmtTime(a.startTime)} · ${a.services.map((x) => x.name).join(', ')}</span>`}</button>`; })}
+      </div></div>`; })}
+  </div><div class="m" style="border-top:1px solid var(--line);padding:8px 14px">Click an empty time in a stylist's column to book it. Click a booking to update it.</div></div>`;
+}
+
+function slotProblem(s, { staffId, date, start, end, ignoreId }) {
+  const st = s.staff.find((x) => x.id === staffId);
+  if (!st || st.active === false) return 'Choose an active stylist.';
+  const a = toMin(start), b = toMin(end);
+  if (b > 24 * 60) return 'The services run past midnight. Pick an earlier start.';
+  if (a < toMin(s.settings.openTime) || b > toMin(s.settings.closeTime)) return `The salon is open ${fmtTime(s.settings.openTime)} to ${fmtTime(s.settings.closeTime)}.`;
+  const dow = parseDate(date).getDay();
+  if (!(st.workDays || []).includes(dow)) return `${st.name} does not work on ${DAYS[dow]}.`;
+  if (a < toMin(st.startTime) || b > toMin(st.endTime)) return `${st.name} works ${fmtTime(st.startTime)} to ${fmtTime(st.endTime)}.`;
+  const clash = s.appointments.find((x) => x.id !== ignoreId && x.staffId === staffId && x.date === date && ['Booked', 'CheckedIn', 'InService', 'Completed'].includes(x.status) && a < toMin(x.endTime) && b > toMin(x.startTime));
+  if (clash) return `${st.name} is already booked ${fmtTime(clash.startTime)} to ${fmtTime(clash.endTime)} with ${s.customers.find((c) => c.id === clash.customerId)?.name || 'another client'}.`;
+  return null;
+}
+
+function BookingForm({ s, initial, staff, onDone }) {
+  const [d, setD] = useState(initial);
+  const [nc, setNc] = useState(null);
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const services = s.services.filter((x) => x.active !== false).sort(byName);
+  const chosen = d.serviceIds.map((id) => services.find((x) => x.id === id)).filter(Boolean);
+  const dur = chosen.reduce((a, x) => a + x.duration, 0), price = chosen.reduce((a, x) => a + x.price, 0);
+  const avail = services.filter((x) => !d.serviceIds.includes(x.id) && (x.name + ' ' + x.category).toLowerCase().includes(q.toLowerCase()));
+  async function submit(e) {
+    e.preventDefault(); setBusy(true);
+    await write(async () => {
+      if (!chosen.length) throw new Problem('Add at least one service.');
+      if (!d.customerId && !nc) throw new Problem('Choose a client or add a new one.');
+      const end = fromMin(toMin(d.startTime) + dur);
+      const p = slotProblem(s, { staffId: d.staffId, date: d.date, start: d.startTime, end });
+      if (p) throw new Problem(p);
+      const cid = nc ? (await createClient(nc, s.customers)).id : d.customerId;
+      await put('appointments', newId(), { customerId: cid, staffId: d.staffId, date: d.date, startTime: d.startTime, endTime: end, status: d.walkIn ? 'CheckedIn' : 'Booked', walkIn: d.walkIn, notes: d.notes.trim(), services: chosen.map((x) => ({ id: x.id, name: x.name, price: x.price, duration: x.duration })), invoiceId: null, createdAt: new Date().toISOString() });
+      onDone(d.date);
+    }, 'Appointment booked');
+    setBusy(false);
+  }
+  return html`<form onSubmit=${submit} class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+    <div class="grid" style="align-content:start;gap:14px">
+      <div><span class="m" style="display:block;margin-bottom:4px;font-weight:500">Client</span>
+        <${ClientPicker} customers=${s.customers.filter((c) => c.active !== false)} value=${d.customerId} onChange=${(id, c) => setD({ ...d, customerId: id, staffId: c?.preferredStaffId && staff.some((x) => x.id === c.preferredStaffId) ? c.preferredStaffId : d.staffId })} newClient=${nc} setNewClient=${setNc} /></div>
+      <div class="form">
+        <${F} label="Date"><input type="date" class="in" id="bk-date" value=${d.date} onInput=${(e) => setD({ ...d, date: e.target.value })} required /><//>
+        <${F} label="Start time"><input type="time" step="900" class="in" id="bk-time" value=${d.startTime} onInput=${(e) => setD({ ...d, startTime: e.target.value })} required /><//>
+        <${F} label="Stylist" full><select class="in" id="bk-staff" value=${d.staffId} onChange=${(e) => setD({ ...d, staffId: e.target.value })}>${staff.map((x) => html`<option value=${x.id}>${x.name}</option>`)}</select><//>
+      </div>
+      <label class="check"><input type="checkbox" id="bk-walkin" checked=${d.walkIn} onChange=${(e) => setD({ ...d, walkIn: e.target.checked })} />Walk-in (client is here now)</label>
+      <${F} label="Notes"><textarea class="in" id="bk-notes" value=${d.notes} onInput=${(e) => setD({ ...d, notes: e.target.value })} placeholder="Colour formula, requests, anything the stylist should know"></textarea><//>
+    </div>
+    <div style="min-width:0;display:flex;flex-direction:column">
+      <span class="m" style="font-weight:500;margin-bottom:4px">Services</span>
+      ${chosen.map((x) => html`<div class="row" style="justify-content:space-between;background:var(--accent-soft);border-radius:8px;padding:6px 10px;margin-bottom:4px;flex-wrap:nowrap"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.name}</span><span class="row tab m" style="flex-wrap:nowrap">${fmtDur(x.duration)} · ${money0(x.price)}<button type="button" class="x" style="font-size:16px" aria-label=${'Remove ' + x.name} onClick=${() => setD({ ...d, serviceIds: d.serviceIds.filter((i) => i !== x.id) })}>×</button></span></div>`)}
+      <input class="in" id="bk-svc" placeholder="Find a service" aria-label="Find a service" value=${q} onInput=${(e) => setQ(e.target.value)} />
+      <div style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-top:6px">
+        ${avail.map((x) => html`<button type="button" style="display:flex;width:100%;justify-content:space-between;gap:8px;border:0;border-bottom:1px solid var(--line);background:none;padding:7px 10px;cursor:pointer;text-align:left" onClick=${() => setD({ ...d, serviceIds: [...d.serviceIds, x.id] })}><span><span style="display:block">${x.name}</span><span class="m">${x.category}</span></span><span class="tab m" style="white-space:nowrap">${fmtDur(x.duration)} · ${money0(x.price)}</span></button>`)}
+        ${!avail.length && html`<div class="pad m">${services.length ? 'No more services match.' : 'Add services on the Services screen first.'}</div>`}
+      </div>
+      <div class="due" style="background:var(--bg)"><span>${chosen.length ? `${fmtTime(d.startTime)} – ${fmtTime(fromMin(toMin(d.startTime) + dur))} · ${fmtDur(dur)}` : 'Add services to see the end time'}</span><b class="tab">${money0(price)}</b></div>
+      <div class="actions"><button type="button" class="btn sec" onClick=${() => onDone()}>Cancel</button><button class="btn" disabled=${busy || !chosen.length}>Book appointment</button></div>
+    </div></form>`;
+}
+
+const FLOW = {
+  Booked: [['CheckedIn', 'Check in'], ['NoShow', 'Mark no-show', 'sec'], ['Cancelled', 'Cancel booking', 'danger']],
+  CheckedIn: [['InService', 'Start service'], ['Booked', 'Undo check-in', 'sec'], ['Cancelled', 'Cancel booking', 'danger']],
+  InService: [['Completed', 'Mark completed'], ['CheckedIn', 'Back to checked in', 'sec']],
+  Completed: [], Cancelled: [['Booked', 'Restore booking', 'sec']], NoShow: [['Booked', 'Restore booking', 'sec']],
+};
+function ApptDetail({ s, a, cust, staff, go, onClose }) {
+  const [move, setMove] = useState(null);
+  const c = cust[a.customerId];
+  const inv = a.invoiceId && s.invoices.find((i) => i.id === a.invoiceId && i.status !== 'Void');
+  const setStatus = (to) => write(async () => {
+    if (to === 'Booked' && ['Cancelled', 'NoShow'].includes(a.status)) { const p = slotProblem(s, { staffId: a.staffId, date: a.date, start: a.startTime, end: a.endTime, ignoreId: a.id }); if (p) throw new Problem(p); }
+    await patch('appointments', a.id, { status: to }); onClose();
+  }, `Marked ${APPT[to][1].toLowerCase()}`);
+  return html`<${Modal} title=${c?.name || 'Appointment'} onClose=${onClose}>
+    <div class="row" style="margin-bottom:12px"><${ApptBadge} s=${a.status} />${a.walkIn && html`<span class="m">Walk-in</span>`}${c && html`<button class="link" style="margin-left:auto" onClick=${() => go('clients', { open: c.id })}>Client profile</button>`}</div>
+    <div class="form" style="margin-bottom:12px">
+      <div><div class="m">When</div><b>${fmtDate(a.date, { weekday: 'short', day: 'numeric', month: 'short' })}, ${fmtTime(a.startTime)} – ${fmtTime(a.endTime)}</b></div>
+      <div><div class="m">Stylist</div><b>${staff.find((x) => x.id === a.staffId)?.name || 'Former staff'}</b></div>
+      <div><div class="m">Mobile</div>${c?.phone}</div>
+      <div><div class="m">Service value</div><span class="tab">${money0(a.services.reduce((t, x) => t + x.price, 0))} before GST</span></div>
+    </div>
+    <ul class="list card">${a.services.map((x) => html`<li class="row" style="justify-content:space-between;padding:8px 12px"><span>${x.name}</span><span class="tab m">${money0(x.price)}</span></li>`)}</ul>
+    ${a.notes && html`<p class="m" style="background:var(--bg);padding:8px 12px;border-radius:8px">${a.notes}</p>`}
+    ${move && html`<form class="form" style="border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:12px" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+        const end = fromMin(toMin(move.startTime) + toMin(a.endTime) - toMin(a.startTime));
+        const p = slotProblem(s, { staffId: move.staffId, date: move.date, start: move.startTime, end, ignoreId: a.id }); if (p) throw new Problem(p);
+        await patch('appointments', a.id, { ...move, endTime: end }); onClose(); }, 'Appointment moved'); }}>
+      <${F} label="Date"><input type="date" class="in" id="mv-date" value=${move.date} onInput=${(e) => setMove({ ...move, date: e.target.value })} /><//>
+      <${F} label="Start"><input type="time" step="900" class="in" id="mv-time" value=${move.startTime} onInput=${(e) => setMove({ ...move, startTime: e.target.value })} /><//>
+      <${F} label="Stylist" full><select class="in" id="mv-staff" value=${move.staffId} onChange=${(e) => setMove({ ...move, staffId: e.target.value })}>${s.staff.filter((x) => x.active !== false).map((x) => html`<option value=${x.id}>${x.name}</option>`)}</select><//>
+      <div class="actions full" style="margin:0"><button type="button" class="btn sec" onClick=${() => setMove(null)}>Cancel</button><button class="btn">Save new time</button></div></form>`}
+    <div class="actions" style="justify-content:flex-start;border-top:1px solid var(--line);padding-top:14px">
+      ${!inv && FLOW[a.status].map(([to, label, k]) => html`<button class=${'btn ' + (k || '')} onClick=${() => setStatus(to)}>${label}</button>`)}
+      ${!move && ['Booked', 'CheckedIn'].includes(a.status) && html`<button class="btn sec" onClick=${() => setMove({ staffId: a.staffId, date: a.date, startTime: a.startTime })}>Reschedule</button>`}
+      ${a.status === 'Completed' && !inv && html`<button class="btn" onClick=${() => go('newbill', { appointmentId: a.id })}>Create bill</button>`}
+      ${inv && html`<button class="btn sec" onClick=${() => go('billing', { open: inv.id })}>View bill ${inv.number}</button>`}
+    </div>
+  <//>`;
+}
+
+// ───────────────────────── New bill ─────────────────────────
+function NewBill({ s, go, params }) {
+  const appt = params?.appointmentId && s.appointments.find((a) => a.id === params.appointmentId && !(a.invoiceId && s.invoices.some((i) => i.id === a.invoiceId && i.status !== 'Void')));
+  const [customerId, setCustomerId] = useState(appt?.customerId || params?.customerId || '');
+  const [nc, setNc] = useState(null);
+  const [lines, setLines] = useState(appt ? appt.services.map((x, i) => ({ key: 'a' + i, kind: 'service', refId: x.id, name: x.name, qty: 1, unitPrice: x.price, staffId: appt.staffId })) : []);
+  const [tab, setTab] = useState('service');
+  const [q, setQ] = useState('');
+  const [dt, setDt] = useState('');
+  const [dv, setDv] = useState('');
+  const [withGst, setWithGst] = useState(true);
+  const [pays, setPays] = useState([{ amount: '', method: 'UPI', reference: '' }]);
+  const [auto, setAuto] = useState(true);
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const rate = withGst ? s.settings.gstRate : 0;
+  const bill = computeBill(lines.map((l) => ({ ...l, taxRate: rate })), dt || null, Number(dv) || 0);
+  const payments = auto ? [{ ...pays[0], amount: String(bill.total) }, ...pays.slice(1)] : pays;
+  const paid = round2(payments.reduce((a, p) => a + (Number(p.amount) || 0), 0));
+  const due = round2(bill.total - paid);
+  const staff = s.staff.filter((x) => x.active !== false).sort(byName);
+  const catalog = (tab === 'service' ? s.services.map((x) => ({ ...x, stock: null })) : s.products).filter((x) => x.active !== false && `${x.name} ${x.sku || ''} ${x.category || ''}`.toLowerCase().includes(q.toLowerCase())).sort(byName);
+  const add = (x) => {
+    const ex = tab === 'product' && lines.find((l) => l.kind === 'product' && l.refId === x.id);
+    if (ex) return setLines(lines.map((l) => (l === ex ? { ...l, qty: l.qty + 1 } : l)));
+    setLines([...lines, { key: newId(), kind: tab, refId: x.id, name: x.name, qty: 1, unitPrice: x.price, staffId: null }]);
+  };
+  const upd = (k, p) => setLines(lines.map((l) => (l.key === k ? { ...l, ...p } : l)));
+  const setPay = (i, p) => { setAuto(false); setPays(payments.map((x, j) => (j === i ? { ...x, ...p } : x))); };
+
+  async function save() {
+    setBusy(true);
+    await write(async () => {
+      if (!lines.length) throw new Problem('Add at least one service or product.');
+      if (due < -0.005) throw new Problem(`Payments add up to more than the bill total of ${money(bill.total)}.`);
+      const need = {};
+      lines.filter((l) => l.kind === 'product').forEach((l) => { need[l.refId] = (need[l.refId] || 0) + l.qty; });
+      for (const [pid, qty] of Object.entries(need)) { const p = s.products.find((x) => x.id === pid); if (!p || p.stock < qty) throw new Problem(`Only ${p ? p.stock : 0} ${p?.unit || 'pcs'} of ${p?.name || 'that product'} in stock. Update the stock in Inventory if more has arrived.`); }
+      let cust = s.customers.find((c) => c.id === customerId);
+      if (nc) cust = await createClient(nc, s.customers);
+      if (!cust) throw new Problem('Choose a client or add a new one.');
+      const number = `${s.settings.invoicePrefix}${s.settings.nextInvoiceNo}`;
+      await DB.doc('config/settings').set({ ...s.settings, nextInvoiceNo: s.settings.nextInvoiceNo + 1 });
+      const now = new Date().toISOString();
+      const pl = payments.map((p) => ({ amount: round2(Number(p.amount) || 0), method: p.method, reference: p.reference.trim(), at: now })).filter((p) => p.amount > 0);
+      const id = newId();
+      await put('invoices', id, {
+        number, customerId: cust.id, customerName: cust.name, customerPhone: cust.phone, appointmentId: appt?.id || null, gst: withGst,
+        items: bill.lines.map((l) => ({ kind: l.kind, refId: l.refId, staffId: l.staffId, name: l.name, qty: l.qty, unitPrice: l.unitPrice, taxRate: l.taxRate, discount: l.discount, tax: l.tax, total: l.total })),
+        subtotal: bill.subtotal, discountType: bill.discount > 0 ? dt : null, discountValue: bill.discount > 0 ? Number(dv) : 0, discount: bill.discount, tax: bill.tax, total: bill.total,
+        payments: pl, paid: paid, status: invStatus(bill.total, paid), notes: notes.trim(), createdAt: now,
+      });
+      for (const [pid, qty] of Object.entries(need)) {
+        const p = s.products.find((x) => x.id === pid);
+        const stock = p.stock - qty;
+        await patch('products', pid, { stock, log: [{ at: now, type: 'Sold', change: -qty, balance: stock, note: number }, ...(p.log || [])].slice(0, 40) });
+      }
+      if (appt) await patch('appointments', appt.id, { status: 'Completed', invoiceId: id });
+      go('billing', { open: id });
+    }, 'Bill saved');
+    setBusy(false);
+  }
+
+  return html`
+    <${Head} title="New bill" sub=${appt ? 'Billing a completed appointment. Its services are filled in.' : `Prices are before GST. GST at ${s.settings.gstRate}% is added after any discount, or switch it off for this bill.`} />
+    <div class="grid gside">
+      <div class="grid" style="align-content:start">
+        <${Card} title="Client">
+          <${ClientPicker} customers=${s.customers.filter((c) => c.active !== false)} value=${customerId} onChange=${setCustomerId} newClient=${nc} setNewClient=${setNc} locked=${!!appt} />
+          ${nc && html`<div class="m" style="margin-top:6px">The client is saved together with the bill.</div>`}
+        <//>
+        <${Card} title="Items" pad=${false}>
+          ${lines.length ? html`<div class="tw"><table><thead><tr><th>Item</th><th>Done by</th><th style="width:78px">Qty</th><th style="width:110px">Price (₹)</th><th class="r">Amount</th><th></th></tr></thead><tbody>
+            ${lines.map((l, i) => html`<tr key=${l.key}><td><div>${l.name}</div><div class="m">${l.kind === 'service' ? 'Service' : 'Product'}</div></td>
+              <td>${l.kind === 'service' ? html`<select class="in" style="min-width:130px;padding:5px 8px" aria-label="Done by" value=${l.staffId || ''} onChange=${(e) => upd(l.key, { staffId: e.target.value || null })}><option value="">Not set</option>${staff.map((x) => html`<option value=${x.id}>${x.name}</option>`)}</select>` : html`<span class="m">—</span>`}</td>
+              <td><input class="in" style="padding:5px 8px" type="number" min="1" aria-label="Quantity" value=${l.qty} onInput=${(e) => upd(l.key, { qty: Math.max(1, parseInt(e.target.value) || 1) })} /></td>
+              <td><input class="in" style="padding:5px 8px" type="number" min="0" aria-label="Unit price" value=${l.unitPrice} onInput=${(e) => upd(l.key, { unitPrice: Math.max(0, Number(e.target.value) || 0) })} /></td>
+              <td class="r tab">${money(bill.lines[i]?.total)}</td>
+              <td><button class="x" style="font-size:18px" aria-label=${'Remove ' + l.name} onClick=${() => setLines(lines.filter((x) => x.key !== l.key))}>×</button></td></tr>`)}
+          </tbody></table></div>` : html`<div class="pad m">Add services or products from the list below.</div>`}
+          <div class="pad" style="border-top:1px solid var(--line)">
+            <div class="row" style="margin-bottom:10px">
+              <div class="seg">${[['service', 'Services'], ['product', 'Products']].map(([k, t]) => html`<button aria-pressed=${tab === k} onClick=${() => setTab(k)}>${t}</button>`)}</div>
+              <input class="in" id="nb-find" style="flex:1;max-width:280px" placeholder=${tab === 'service' ? 'Find a service' : 'Find a product or SKU'} aria-label="Find item" value=${q} onInput=${(e) => setQ(e.target.value)} />
+            </div>
+            <div class="catalog">${catalog.map((x) => html`<button disabled=${x.stock === 0} onClick=${() => add(x)}><span style="min-width:0"><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.name}</span>${x.stock != null && html`<span class="m">${x.stock} in stock</span>`}</span><span class="tab">${money(x.price)}</span></button>`)}</div>
+            ${!catalog.length && html`<div class="m">${tab === 'service' ? 'No services match.' : 'No products match.'}</div>`}
+          </div>
+        <//>
+      </div>
+      <div class="grid" style="align-content:start;position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px)">
+        <${Card} title="Summary">
+          <div class="sumrow"><span class="m">Subtotal</span><span class="tab">${money(bill.subtotal)}</span></div>
+          <div class="row" style="flex-wrap:nowrap;margin:6px 0"><select class="in" style="width:150px;flex-shrink:0" aria-label="Discount type" value=${dt} onChange=${(e) => setDt(e.target.value)}><option value="">No discount</option><option value="percent">Discount %</option><option value="amount">Discount ₹</option></select>
+            ${dt && html`<input class="in" type="number" min="0" aria-label="Discount value" value=${dv} onInput=${(e) => setDv(e.target.value)} />`}</div>
+          ${bill.discount > 0 && html`<div class="sumrow"><span class="m">Discount</span><span class="tab">− ${money(bill.discount)}</span></div>`}
+          <label class="check sumrow" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span class="row"><input type="checkbox" id="nb-gst" checked=${withGst} onChange=${(e) => setWithGst(e.target.checked)} />Charge GST (${s.settings.gstRate}%)</span><span class="tab">${withGst ? money(bill.tax) : 'No GST'}</span></label>
+          <div class="sumrow total"><span>Total</span><span class="tab">${money(bill.total)}</span></div>
+        <//>
+        <${Card} title="Payment">
+          ${payments.map((p, i) => html`<div style="display:grid;grid-template-columns:minmax(0,1fr) 92px auto;gap:6px;margin-bottom:8px">
+            <input class="in" type="number" min="0" step="0.01" aria-label="Amount" value=${p.amount} onInput=${(e) => setPay(i, { amount: e.target.value })} />
+            <select class="in" aria-label="Method" value=${p.method} onChange=${(e) => setPay(i, { method: e.target.value })}>${METHODS.map((m) => html`<option>${m}</option>`)}</select>
+            <button class="x" aria-label="Remove payment" style=${payments.length === 1 ? 'visibility:hidden' : ''} onClick=${() => { setAuto(false); setPays(payments.filter((_, j) => j !== i)); }}>×</button>
+            <input class="in" style="grid-column:1 / 3;padding:5px 8px;font-size:12.5px" placeholder="Reference (optional)" aria-label="Reference" value=${p.reference} onInput=${(e) => setPay(i, { reference: e.target.value })} /></div>`)}
+          <div class="row"><button class="btn sec sm" onClick=${() => { setAuto(false); setPays([...payments, { amount: String(Math.max(0, due)), method: 'Cash', reference: '' }]); }}>Split payment</button><button class="btn ghost sm" onClick=${() => { setAuto(false); setPays([{ amount: '0', method: 'Cash', reference: '' }]); }}>Nothing paid now</button></div>
+          <div class="due" style=${due > 0.005 ? 'background:var(--warn-soft);color:var(--warn)' : due < -0.005 ? 'background:var(--bad-soft);color:var(--bad)' : 'background:var(--good-soft);color:var(--good)'}><span>${due > 0.005 ? 'Balance due' : due < -0.005 ? 'Paid more than total' : 'Fully paid'}</span><span class="tab">${money(Math.abs(due))}</span></div>
+        <//>
+        <${F} label="Notes on the bill"><textarea class="in" id="nb-notes" value=${notes} onInput=${(e) => setNotes(e.target.value)}></textarea><//>
+        <button class="btn" style="padding:11px" disabled=${busy || (!customerId && !nc) || !lines.length || due < -0.005} onClick=${save}>Save bill · ${money(bill.total)}</button>
+      </div>
+    </div>`;
+}
+
+// ───────────────────────── Billing ─────────────────────────
+function Billing({ s, go, params }) {
+  const [q, setQ] = useState('');
+  const [st, setSt] = useState('');
+  const [open, setOpen] = useState(params?.open || null);
+  useEffect(() => { if (params?.open) setOpen(params.open); }, [params]);
+  const t = q.trim().toLowerCase();
+  const list = s.invoices.filter((i) => (!st || i.status === st) && (!t || i.number.toLowerCase().includes(t) || (i.customerName || '').toLowerCase().includes(t) || (digits(t) && digits(i.customerPhone).includes(digits(t))))).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const live = list.filter((i) => i.status !== 'Void');
+  const owing = s.invoices.filter((i) => i.status === 'Partial' || i.status === 'Unpaid');
+  const dues = owing.reduce((a, i) => a + i.total - i.paid, 0);
+  const inv = open && s.invoices.find((i) => i.id === open);
+  return html`
+    <${Head} title="Billing" sub="Bills, payments and dues"><button class="btn" onClick=${() => go('newbill')}>New bill</button><//>
+    <div class="grid g4" style="margin-bottom:16px">
+      <${Stat} k="Bills shown" v=${list.length} n="Void bills are left out of totals" />
+      <${Stat} k="Billed" v=${money0(live.reduce((a, i) => a + i.total, 0))} n=${`Collected ${money0(live.reduce((a, i) => a + i.paid, 0))}`} />
+      <${Stat} k="Outstanding dues" v=${money0(dues)} n=${`Across ${plural(owing.length, 'bill')}`} tone=${dues > 0.5 ? 'warn' : ''} />
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <input class="in" id="bl-q" style="max-width:320px" placeholder="Bill number, client name or mobile" aria-label="Search bills" value=${q} onInput=${(e) => setQ(e.target.value)} />
+      <select class="in" id="bl-st" style="width:auto" aria-label="Status" value=${st} onChange=${(e) => setSt(e.target.value)}><option value="">Any status</option><option value="Paid">Paid</option><option value="Partial">Part paid</option><option value="Unpaid">Unpaid</option><option value="Void">Void</option></select>
+    </div>
+    <${Card} pad=${false}>${list.length ? html`<div class="tw"><table><thead><tr><th>Bill</th><th>Client</th><th>Date</th><th class="r">Total</th><th class="r">Due</th><th>Status</th></tr></thead><tbody>
+      ${list.map((i) => html`<tr class="click" onClick=${() => setOpen(i.id)}><td><b style="color:var(--accent)">${i.number}</b><div class="m">${plural(i.items.length, 'item')}</div></td><td>${i.customerName}<div class="m">${i.customerPhone}</div></td><td class="m">${fmtDate(i.createdAt)}</td>
+        <td class="r tab"><b>${money(i.total)}</b></td><td class="r tab" style=${i.status !== 'Void' && i.total - i.paid > 0.005 ? 'color:var(--warn)' : 'color:var(--mute)'}>${i.status !== 'Void' && i.total - i.paid > 0.005 ? money(i.total - i.paid) : '—'}</td><td><${InvBadge} s=${i.status} /></td></tr>`)}
+      </tbody></table></div>` : html`<${Empty} title=${s.invoices.length ? 'No bills match' : 'No bills yet'}>${s.invoices.length ? 'Try another search or status.' : 'Create one with New bill, or from a completed appointment.'}<//>`}<//>
+    ${inv && html`<${InvoiceView} s=${s} inv=${inv} onClose=${() => setOpen(null)} />`}`;
+}
+
+function invoiceHTML(s, inv) {
+  const e = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const g = inv.tax > 0, set = s.settings, r = inv.items[0]?.taxRate || 0;
+  const rows = inv.items.map((i) => `<tr><td>${e(i.name)}</td><td class=r>${i.qty}</td><td class=r>${money(i.unitPrice)}</td><td class=r>${i.discount ? money(i.discount) : '—'}</td>${g ? `<td class=r>${money(i.tax)}</td>` : ''}<td class=r>${money(i.total)}</td></tr>`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${e(inv.number)}</title><style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1f1b24;max-width:720px;margin:32px auto;padding:0 24px;font-size:13px}h1{font-family:Georgia,serif;font-weight:500;font-size:22px;margin:0}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{padding:8px 4px;border-bottom:1px solid #e7e3ea;text-align:left}th{font-size:11px;text-transform:uppercase;color:#7a7383}.r{text-align:right}.top{display:flex;justify-content:space-between;border-bottom:1px solid #e7e3ea;padding-bottom:16px}.tot{margin-left:auto;width:260px;margin-top:12px}.tot div{display:flex;justify-content:space-between;padding:2px 0}.big{font-size:16px;font-weight:600;border-top:1px solid #e7e3ea;margin-top:4px;padding-top:6px}.m{color:#7a7383}</style></head><body>
+<div class=top><div><h1>${e(set.name)}</h1><div class=m>${e(set.address)}${set.phone ? '<br>' + e(set.phone) : ''}${set.email ? ' · ' + e(set.email) : ''}</div>${g && set.gstin ? `<div><b>GSTIN ${e(set.gstin)}</b></div>` : ''}</div>
+<div class=r><div class=m style="letter-spacing:.15em;text-transform:uppercase;font-size:11px">${g ? 'Tax invoice' : 'Invoice'}</div><div style="font-size:18px;font-weight:600">${e(inv.number)}</div><div class=m>${fmtDate(inv.createdAt, { day: 'numeric', month: 'long', year: 'numeric' })}</div><div>${inv.status === 'Partial' ? 'Part paid' : inv.status}</div></div></div>
+<p><span class=m>Billed to</span><br><b>${e(inv.customerName)}</b><br>${e(inv.customerPhone)}</p>
+<table><thead><tr><th>Item</th><th class=r>Qty</th><th class=r>Rate</th><th class=r>Discount</th>${g ? '<th class=r>GST</th>' : ''}<th class=r>Amount</th></tr></thead><tbody>${rows}</tbody></table>
+<div class=tot><div><span>Subtotal</span><span>${money(inv.subtotal)}</span></div>${inv.discount ? `<div><span>Discount</span><span>− ${money(inv.discount)}</span></div>` : ''}${g ? `<div><span>CGST (${r / 2}%)</span><span>${money(inv.tax / 2)}</span></div><div><span>SGST (${r / 2}%)</span><span>${money(inv.tax / 2)}</span></div>` : '<div><span>GST</span><span>Not charged</span></div>'}<div class=big><span>Total</span><span>${money(inv.total)}</span></div><div><span>Paid</span><span>${money(inv.paid)}</span></div>${inv.status !== 'Void' && inv.total - inv.paid > 0.005 ? `<div><b>Balance due</b><b>${money(inv.total - inv.paid)}</b></div>` : ''}</div>
+${inv.notes ? `<p class=m style="white-space:pre-line">${e(inv.notes)}</p>` : ''}<p class=m style="text-align:center;margin-top:32px;border-top:1px solid #e7e3ea;padding-top:12px">${e(set.footer)}</p></body></html>`;
+}
+
+async function download(filename, data, type) {
+  const d = await window.claude?.use?.('downloads').catch(() => null);
+  if (!d) return toast('Downloads are not available in this view.', true);
+  try { await d.save({ filename, data: new Blob([data], { type }) }); } catch (e) { if (e?.code !== 'declined') toast('Could not save the file.', true); }
+}
+
+function InvoiceView({ s, inv, onClose }) {
+  const [pay, setPay] = useState(null);
+  const [why, setWhy] = useState(null);
+  const due = inv.status === 'Void' ? 0 : round2(inv.total - inv.paid);
+  const g = inv.tax > 0, r = inv.items[0]?.taxRate || 0;
+  const staff = Object.fromEntries(s.staff.map((x) => [x.id, x.name]));
+  return html`<${Modal} title=${`Bill ${inv.number}`} wide onClose=${onClose}>
+    <div class="row" style="margin-bottom:16px">
+      ${due > 0.005 && html`<button class="btn" onClick=${() => setPay({ amount: String(due), method: 'UPI', reference: '' })}>Take payment</button>`}
+      <button class="btn sec" onClick=${() => download(`${inv.number}.html`, invoiceHTML(s, inv), 'text/html')}>Download bill</button>
+      ${inv.status !== 'Void' && html`<button class="btn danger" onClick=${() => setWhy('')}>Void bill</button>`}
+    </div>
+    ${pay && html`<form class="form card pad" style="margin-bottom:16px" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+        const amt = round2(Number(pay.amount) || 0);
+        if (amt <= 0) throw new Problem('Enter an amount above zero.');
+        if (amt > due + 0.005) throw new Problem(`Only ${money(due)} is due on this bill.`);
+        const paid = round2(inv.paid + amt);
+        await patch('invoices', inv.id, { payments: [...(inv.payments || []), { amount: amt, method: pay.method, reference: pay.reference.trim(), at: new Date().toISOString() }], paid, status: invStatus(inv.total, paid) });
+        setPay(null); }, 'Payment recorded'); }}>
+      <${F} label="Amount (₹)"><input class="in" id="tp-amt" type="number" min="0.01" step="0.01" value=${pay.amount} onInput=${(e) => setPay({ ...pay, amount: e.target.value })} /><//>
+      <${F} label="Method"><select class="in" id="tp-m" value=${pay.method} onChange=${(e) => setPay({ ...pay, method: e.target.value })}>${METHODS.map((m) => html`<option>${m}</option>`)}</select><//>
+      <${F} label="Reference" full><input class="in" id="tp-ref" value=${pay.reference} onInput=${(e) => setPay({ ...pay, reference: e.target.value })} placeholder="UPI or card reference (optional)" /><//>
+      <div class="actions full" style="margin:0"><button type="button" class="btn sec" onClick=${() => setPay(null)}>Cancel</button><button class="btn">Record payment</button></div></form>`}
+    ${why !== null && html`<form class="card pad" style="margin-bottom:16px" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+        if (!why.trim()) throw new Problem('Give a reason for voiding the bill.');
+        const now = new Date().toISOString();
+        const back = {}; inv.items.filter((i) => i.kind === 'product').forEach((i) => { back[i.refId] = (back[i.refId] || 0) + i.qty; });
+        for (const [pid, qty] of Object.entries(back)) { const p = s.products.find((x) => x.id === pid); if (p) { const stock = p.stock + qty; await patch('products', pid, { stock, log: [{ at: now, type: 'Returned', change: qty, balance: stock, note: `${inv.number} voided` }, ...(p.log || [])].slice(0, 40) }); } }
+        await patch('invoices', inv.id, { status: 'Void', notes: [inv.notes, `Voided: ${why.trim()}`].filter(Boolean).join('\n') });
+        if (inv.appointmentId && s.appointments.some((a) => a.id === inv.appointmentId)) await patch('appointments', inv.appointmentId, { invoiceId: null });
+        setWhy(null); }, 'Bill voided'); }}>
+      <p class="m" style="margin-top:0">The bill stays on record marked Void and is left out of sales reports. Products on it go back into stock. Refund any money paid separately.</p>
+      <${F} label="Reason"><input class="in" id="vd-why" value=${why} onInput=${(e) => setWhy(e.target.value)} placeholder="Billed to the wrong client" /><//>
+      <div class="actions"><button type="button" class="btn sec" onClick=${() => setWhy(null)}>Keep bill</button><button class="btn danger">Void bill</button></div></form>`}
+    <div class="sheet">
+      <div class="inv-head"><div><div class="nm">${s.settings.name}</div><div class="m">${s.settings.address}${s.settings.phone && ` · ${s.settings.phone}`}</div>${g && s.settings.gstin && html`<div><b>GSTIN ${s.settings.gstin}</b></div>`}</div>
+        <div style="text-align:right"><div class="eyebrow">${g ? 'Tax invoice' : 'Invoice'}</div><div style="font-size:19px;font-weight:600">${inv.number}</div><div class="m">${fmtDate(inv.createdAt, { day: 'numeric', month: 'long', year: 'numeric' })}</div><div style="margin-top:4px"><${InvBadge} s=${inv.status} /></div></div></div>
+      <p><span class="m">Billed to</span><br /><b>${inv.customerName}</b> <span class="m">${inv.customerPhone}</span></p>
+      <div class="tw"><table><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Discount</th>${g && html`<th class="r">GST</th>`}<th class="r">Amount</th></tr></thead><tbody class="tab">
+        ${inv.items.map((i) => html`<tr><td>${i.name}${i.staffId && html`<div class="m">by ${staff[i.staffId] || 'former staff'}</div>`}</td><td class="r">${i.qty}</td><td class="r">${money(i.unitPrice)}</td><td class="r">${i.discount ? money(i.discount) : '—'}</td>${g && html`<td class="r">${money(i.tax)}</td>`}<td class="r"><b>${money(i.total)}</b></td></tr>`)}
+      </tbody></table></div>
+      <div class="row" style="justify-content:space-between;align-items:flex-start;margin-top:14px;gap:20px">
+        <div style="flex:1;min-width:200px">${(inv.payments || []).length > 0 && html`<div class="m" style="font-weight:600">Payments</div>${inv.payments.map((p) => html`<div class="m tab">${fmtDT(p.at)} · ${p.method}${p.reference && ` (${p.reference})`} · ${money(p.amount)}</div>`)}`}${inv.notes && html`<p class="m" style="white-space:pre-line">${inv.notes}</p>`}</div>
+        <div class="tab" style="width:260px">
+          <div class="sumrow"><span class="m">Subtotal</span><span>${money(inv.subtotal)}</span></div>
+          ${inv.discount > 0 && html`<div class="sumrow"><span class="m">Discount${inv.discountType === 'percent' ? ` (${inv.discountValue}%)` : ''}</span><span>− ${money(inv.discount)}</span></div>`}
+          ${g ? html`<div class="sumrow"><span class="m">CGST (${r / 2}%)</span><span>${money(inv.tax / 2)}</span></div><div class="sumrow"><span class="m">SGST (${r / 2}%)</span><span>${money(inv.tax / 2)}</span></div>` : html`<div class="sumrow"><span class="m">GST</span><span>Not charged</span></div>`}
+          <div class="sumrow total"><span>Total</span><span>${money(inv.total)}</span></div>
+          <div class="sumrow"><span class="m">Paid</span><span>${money(inv.paid)}</span></div>
+          ${due > 0.005 && html`<div class="sumrow" style="color:var(--warn);font-weight:600"><span>Balance due</span><span>${money(due)}</span></div>`}
+        </div>
+      </div>
+    </div>
+  <//>`;
+}
+
+// ───────────────────────── Clients ─────────────────────────
+function Clients({ s, go, params }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(params?.open || null);
+  const [edit, setEdit] = useState(null);
+  useEffect(() => { if (params?.open) setOpen(params.open); }, [params]);
+  const stats = useMemo(() => {
+    const m = {};
+    s.invoices.filter((i) => i.status !== 'Void').forEach((i) => { const x = (m[i.customerId] ||= { billed: 0, due: 0, visits: 0, last: '' }); x.billed += i.total; x.due += i.total - i.paid; });
+    s.appointments.filter((a) => a.status === 'Completed').forEach((a) => { const x = (m[a.customerId] ||= { billed: 0, due: 0, visits: 0, last: '' }); x.visits++; if (a.date > x.last) x.last = a.date; });
+    return m;
+  }, [s.invoices, s.appointments]);
+  const t = q.trim().toLowerCase();
+  const list = s.customers.filter((c) => c.active !== false && (!t || c.name.toLowerCase().includes(t) || (digits(t) && digits(c.phone).includes(digits(t))) || (c.email || '').toLowerCase().includes(t))).sort(byName);
+  const staffName = Object.fromEntries(s.staff.map((x) => [x.id, x.name]));
+  const c = open && s.customers.find((x) => x.id === open);
+  return html`
+    <${Head} title="Clients" sub=${plural(list.length, t ? 'matching client' : 'active client')}><button class="btn" onClick=${() => setEdit({ name: '', phone: '', email: '', hairNotes: '', nailNotes: '', notes: '', preferredStaffId: '' })}>+ New client</button><//>
+    <input class="in" id="cl-q" style="max-width:360px;margin-bottom:12px" placeholder="Search by name, mobile or email" aria-label="Search clients" value=${q} onInput=${(e) => setQ(e.target.value)} />
+    <${Card} pad=${false}>${list.length ? html`<div class="tw"><table><thead><tr><th>Client</th><th>Preferred stylist</th><th class="r">Visits</th><th>Last visit</th><th class="r">Billed</th><th class="r">Due</th></tr></thead><tbody>
+      ${list.map((c) => { const x = stats[c.id] || {}; return html`<tr class="click" onClick=${() => setOpen(c.id)}><td><b>${c.name}</b><div class="m">${c.phone}</div></td><td class="m">${staffName[c.preferredStaffId] || '—'}</td><td class="r tab">${x.visits || 0}</td><td class="m">${x.last ? fmtDate(x.last) : '—'}</td><td class="r tab">${money0(x.billed)}</td><td class="r tab" style=${x.due > 0.5 ? 'color:var(--warn);font-weight:600' : 'color:var(--mute)'}>${x.due > 0.5 ? money0(x.due) : '—'}</td></tr>`; })}
+      </tbody></table></div>` : html`<${Empty} title=${t ? 'No clients match' : 'No clients yet'}>${t ? 'Try part of the name or the last digits of the mobile.' : 'Add clients here, or while booking or billing.'}<//>`}<//>
+    ${c && !edit && html`<${ClientProfile} s=${s} c=${c} x=${stats[c.id] || {}} go=${go} onEdit=${() => setEdit({ ...c })} onClose=${() => setOpen(null)} />`}
+    ${edit && html`<${Modal} title=${edit.id ? 'Edit client' : 'New client'} wide onClose=${() => setEdit(null)}><${ClientForm} s=${s} initial=${edit} onDone=${(id) => { setEdit(null); if (id) setOpen(id); }} /><//>`}`;
+}
+
+function ClientForm({ s, initial, onDone }) {
+  const [f, setF] = useState(initial);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return html`<form class="form" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+      const name = f.name.trim(), phone = f.phone.trim();
+      if (!name) throw new Problem('Enter the client\'s name.');
+      if (digits(phone).length < 7) throw new Problem('Enter a valid mobile number.');
+      if (s.customers.some((c) => c.id !== f.id && digits(c.phone) === digits(phone))) throw new Problem('Another client already has that mobile number.');
+      const id = f.id || newId();
+      const doc = { ...strip(f), name, phone, email: (f.email || '').trim(), active: true, createdAt: f.createdAt || new Date().toISOString() };
+      await put('customers', id, doc); onDone(id);
+    }, f.id ? 'Client updated' : 'Client added'); }}>
+    <${F} label="Full name"><input class="in" id="cf-name" value=${f.name} onInput=${set('name')} required /><//>
+    <${F} label="Mobile number"><input class="in" id="cf-phone" value=${f.phone} onInput=${set('phone')} required placeholder="+91 98765 43210" /><//>
+    <${F} label="Email"><input class="in" id="cf-email" type="email" value=${f.email || ''} onInput=${set('email')} /><//>
+    <${F} label="Preferred stylist"><select class="in" id="cf-pref" value=${f.preferredStaffId || ''} onChange=${set('preferredStaffId')}><option value="">No preference</option>${s.staff.filter((x) => x.active !== false).sort(byName).map((x) => html`<option value=${x.id}>${x.name}</option>`)}</select><//>
+    <${F} label="Hair notes" full><textarea class="in" id="cf-hair" value=${f.hairNotes || ''} onInput=${set('hairNotes')} placeholder="Cut style, colour formula, scalp sensitivity, treatment frequency"></textarea><//>
+    <${F} label="Nail notes" full><textarea class="in" id="cf-nail" value=${f.nailNotes || ''} onInput=${set('nailNotes')} placeholder="Shape, length, favourite shades, extension type"></textarea><//>
+    <${F} label="Other notes" full><textarea class="in" id="cf-notes" value=${f.notes || ''} onInput=${set('notes')} placeholder="Allergies, preferences, birthday"></textarea><//>
+    <div class="actions full" style="margin:0"><button type="button" class="btn sec" onClick=${() => onDone()}>Cancel</button><button class="btn">${f.id ? 'Save changes' : 'Add client'}</button></div></form>`;
+}
+
+function ClientProfile({ s, c, x, go, onEdit, onClose }) {
+  const [archive, setArchive] = useState(false);
+  const appts = s.appointments.filter((a) => a.customerId === c.id).sort((a, b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 30);
+  const bills = s.invoices.filter((i) => i.customerId === c.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 30);
+  const staffName = Object.fromEntries(s.staff.map((y) => [y.id, y.name]));
+  return html`<${Modal} title=${c.name} wide onClose=${onClose}>
+    <div class="row" style="margin-bottom:14px"><span class="m">${c.phone}${c.email && ` · ${c.email}`}</span>
+      <span style="margin-left:auto" class="row"><button class="btn sec sm" onClick=${() => go('appointments', { book: { customerId: c.id } })}>Book</button><button class="btn sm" onClick=${() => go('newbill', { customerId: c.id })}>New bill</button><button class="btn ghost sm" onClick=${onEdit}>Edit</button><button class="btn ghost sm" onClick=${() => setArchive(true)}>Archive</button></span></div>
+    ${archive && html`<div class="notice">Archive ${c.name}? They will be hidden from lists and booking; their bills stay in reports.
+      <div class="row" style="margin-top:8px"><button class="btn sec sm" onClick=${() => setArchive(false)}>Keep client</button><button class="btn danger sm" onClick=${() => write(async () => { await patch('customers', c.id, { active: false }); onClose(); }, 'Client archived')}>Archive client</button></div></div>`}
+    <div class="grid g4" style="margin-bottom:14px"><${Stat} k="Completed visits" v=${x.visits || 0} /><${Stat} k="Total billed" v=${money0(x.billed)} /><${Stat} k="Balance due" v=${money0(x.due)} tone=${x.due > 0.5 ? 'warn' : ''} /></div>
+    <div class="grid g2">
+      <div class="card pad">${[['Hair', c.hairNotes], ['Nails', c.nailNotes], ['Notes', c.notes], ['Preferred stylist', staffName[c.preferredStaffId]]].map(([k, v]) => html`<div style="margin-bottom:12px"><div class="eyebrow" style="color:var(--mute);letter-spacing:.06em">${k}</div><div style=${'white-space:pre-line;' + (v ? '' : 'color:var(--mute)')}>${v || 'Not recorded'}</div></div>`)}</div>
+      <div class="grid" style="align-content:start">
+        <${Card} title="Appointments" pad=${false}>${appts.length ? html`<ul class="list">${appts.map((a) => html`<li class="row" style="justify-content:space-between"><div><div>${a.services.map((y) => y.name).join(', ')}</div><div class="m">${fmtDate(a.date)} · ${fmtTime(a.startTime)} · ${staffName[a.staffId] || ''}</div></div><${ApptBadge} s=${a.status} /></li>`)}</ul>` : html`<div class="pad m">No appointments yet.</div>`}<//>
+        <${Card} title="Bills" pad=${false}>${bills.length ? html`<ul class="list">${bills.map((i) => html`<li class="row" style="justify-content:space-between;cursor:pointer" onClick=${() => go('billing', { open: i.id })}><div><b>${i.number}</b><div class="m">${fmtDate(i.createdAt)}</div></div><span class="row"><span class="tab">${money(i.total)}</span><${InvBadge} s=${i.status} /></span></li>`)}</ul>` : html`<div class="pad m">No bills yet.</div>`}<//>
+      </div>
+    </div>
+  <//>`;
+}
+
+// ───────────────────────── Services ─────────────────────────
+function Services({ s }) {
+  const [edit, setEdit] = useState(null);
+  const [q, setQ] = useState('');
+  const list = s.services.filter((x) => x.active !== false && x.name.toLowerCase().includes(q.toLowerCase()));
+  const cats = [...new Set(s.services.filter((x) => x.active !== false).map((x) => x.category))].sort();
+  const groups = [...new Set(list.map((x) => x.category))].sort();
+  return html`
+    <${Head} title="Services" sub=${`${plural(list.length, 'service')}. Prices are before GST, which is set on the Settings screen.`}><button class="btn" onClick=${() => setEdit({ name: '', category: cats[0] || 'Haircut & Styling', price: '', duration: 30, description: '' })}>+ New service</button><//>
+    <input class="in" id="sv-q" style="max-width:320px;margin-bottom:12px" placeholder="Search services" aria-label="Search services" value=${q} onInput=${(e) => setQ(e.target.value)} />
+    ${groups.length ? html`<div class="grid">${groups.map((g) => { const items = list.filter((x) => x.category === g).sort(byName); return html`<${Card} title=${g} pad=${false} actions=${html`<span class="m">${plural(items.length, 'service')}</span>`}>
+      <ul class="list">${items.map((x) => html`<li class="row" style="gap:6px 20px"><div style="flex:1;min-width:180px"><b>${x.name}</b>${x.description && html`<div class="m">${x.description}</div>`}</div><span class="tab m" style="width:60px">${fmtDur(x.duration)}</span><b class="tab" style="width:80px;text-align:right">${money0(x.price)}</b><button class="btn ghost sm" onClick=${() => setEdit({ ...x })}>Edit</button></li>`)}</ul><//>`; })}</div>`
+      : html`<${Card}><${Empty} title=${q ? 'No services match' : 'No services yet'}>Add the treatments you offer with New service.<//><//>`}
+    ${edit && html`<${Modal} title=${edit.id ? 'Edit service' : 'New service'} onClose=${() => setEdit(null)}>
+      <form class="form" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+          const price = Number(edit.price), duration = parseInt(edit.duration);
+          if (!edit.name.trim()) throw new Problem('Enter the service name.');
+          if (!edit.category.trim()) throw new Problem('Enter a category.');
+          if (!(price >= 0) || edit.price === '') throw new Problem('Enter a price.');
+          if (!(duration >= 5)) throw new Problem('Duration must be at least 5 minutes.');
+          await put('services', edit.id || newId(), { name: edit.name.trim(), category: edit.category.trim(), price, duration, description: (edit.description || '').trim(), active: true });
+          setEdit(null); }, 'Service saved'); }}>
+        <${F} label="Service name" full><input class="in" id="se-name" value=${edit.name} onInput=${(e) => setEdit({ ...edit, name: e.target.value })} required /><//>
+        <${F} label="Category" full hint="Pick one or type a new category"><input class="in" id="se-cat" list="svc-cats" value=${edit.category} onInput=${(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="svc-cats">${cats.map((c) => html`<option value=${c} />`)}</datalist><//>
+        <${F} label="Price before GST (₹)"><input class="in" id="se-price" type="number" min="0" value=${edit.price} onInput=${(e) => setEdit({ ...edit, price: e.target.value })} required /><//>
+        <${F} label="Duration (minutes)"><input class="in" id="se-dur" type="number" min="5" step="5" value=${edit.duration} onInput=${(e) => setEdit({ ...edit, duration: e.target.value })} required /><//>
+        <${F} label="Description" full><textarea class="in" id="se-desc" value=${edit.description || ''} onInput=${(e) => setEdit({ ...edit, description: e.target.value })}></textarea><//>
+        <div class="actions full" style="margin:0;justify-content:space-between">${edit.id ? html`<button type="button" class="btn danger" onClick=${() => write(async () => { await patch('services', edit.id, { active: false }); setEdit(null); }, 'Service archived')}>Archive</button>` : html`<span></span>`}<span class="row"><button type="button" class="btn sec" onClick=${() => setEdit(null)}>Cancel</button><button class="btn">Save service</button></span></div>
+      </form><//>`}`;
+}
+
+// ───────────────────────── Staff ─────────────────────────
+function Staff({ s }) {
+  const [f, setF] = useState(null);
+  const today = isoDate();
+  const list = s.staff.filter((x) => x.active !== false).sort(byName);
+  const upcoming = (id) => s.appointments.filter((a) => a.staffId === id && a.status === 'Booked' && a.date >= today).length;
+  return html`
+    <${Head} title="Staff" sub="Working days and hours decide when each person can be booked."><button class="btn" onClick=${() => setF({ name: '', phone: '', title: 'Stylist', skills: '', commissionRate: 25, workDays: [1, 2, 3, 4, 5, 6], startTime: '09:00', endTime: '20:00' })}>+ Add team member</button><//>
+    ${list.length ? html`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${list.map((x) => html`<div class="card pad">
+      <div class="row" style="justify-content:space-between;align-items:flex-start"><div><b style="font-size:16px">${x.name}</b><div class="m">${x.title} · ${x.phone}</div></div><span class="badge b-plum">${x.commissionRate}% commission</span></div>
+      ${x.skills && html`<div class="chips" style="margin-top:10px">${x.skills.split(',').map((k) => k.trim()).filter(Boolean).map((k) => html`<span class="badge b-gray">${k}</span>`)}</div>`}
+      <div class="chips" style="margin-top:12px;align-items:center">${DAYS.map((d, i) => html`<span class="m" style=${(x.workDays || []).includes(i) ? 'color:var(--accent);font-weight:600' : 'text-decoration:line-through'}>${d}</span>`)}<span class="m" style="margin-left:6px">${fmtTime(x.startTime)} – ${fmtTime(x.endTime)}</span></div>
+      <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><span class="m">${plural(upcoming(x.id), 'upcoming booking')}</span><button class="btn ghost sm" onClick=${() => setF({ ...x })}>Edit</button></div></div>`)}</div>`
+      : html`<${Card}><${Empty} title="No team members yet">Add stylists and nail technicians so you can book them.<//><//>`}
+    ${f && html`<${Modal} title=${f.id ? 'Edit team member' : 'Add team member'} onClose=${() => setF(null)}>
+      <form class="form" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+          if (!f.name.trim()) throw new Problem('Enter a name.');
+          if (digits(f.phone).length < 7) throw new Problem('Enter a valid mobile number.');
+          if (!f.workDays.length) throw new Problem('Pick at least one working day.');
+          if (toMin(f.endTime) <= toMin(f.startTime)) throw new Problem('The shift must end after it starts.');
+          const rate = Number(f.commissionRate); if (!(rate >= 0 && rate <= 100)) throw new Problem('Commission must be between 0 and 100%.');
+          await put('staff', f.id || newId(), { ...strip(f), name: f.name.trim(), phone: f.phone.trim(), title: f.title.trim() || 'Stylist', commissionRate: rate, workDays: [...f.workDays].sort(), active: true });
+          setF(null); }, 'Team member saved'); }}>
+        <${F} label="Full name" full><input class="in" id="st-name" value=${f.name} onInput=${(e) => setF({ ...f, name: e.target.value })} required /><//>
+        <${F} label="Mobile number"><input class="in" id="st-phone" value=${f.phone} onInput=${(e) => setF({ ...f, phone: e.target.value })} required /><//>
+        <${F} label="Job title"><input class="in" id="st-title" value=${f.title} onInput=${(e) => setF({ ...f, title: e.target.value })} placeholder="Senior Stylist" /><//>
+        <${F} label="Commission (%)"><input class="in" id="st-comm" type="number" min="0" max="100" step="0.5" value=${f.commissionRate} onInput=${(e) => setF({ ...f, commissionRate: e.target.value })} /><//>
+        <${F} label="Skills" hint="Separate with commas"><input class="in" id="st-skills" value=${f.skills} onInput=${(e) => setF({ ...f, skills: e.target.value })} placeholder="Balayage, Keratin" /><//>
+        <div class="full"><span class="m" style="font-weight:500">Working days</span><div class="chips" style="margin-top:4px">${DAYS.map((d, i) => html`<button type="button" class="day" aria-pressed=${f.workDays.includes(i)} onClick=${() => setF({ ...f, workDays: f.workDays.includes(i) ? f.workDays.filter((y) => y !== i) : [...f.workDays, i] })}>${d}</button>`)}</div></div>
+        <${F} label="Shift starts"><input class="in" id="st-start" type="time" value=${f.startTime} onInput=${(e) => setF({ ...f, startTime: e.target.value })} /><//>
+        <${F} label="Shift ends"><input class="in" id="st-end" type="time" value=${f.endTime} onInput=${(e) => setF({ ...f, endTime: e.target.value })} /><//>
+        <div class="actions full" style="margin:0;justify-content:space-between">${f.id ? html`<button type="button" class="btn danger" onClick=${() => write(async () => { const n = upcoming(f.id); if (n) throw new Problem(`Move or cancel their ${plural(n, 'upcoming booking')} first.`); await patch('staff', f.id, { active: false }); setF(null); }, 'Team member archived')}>Archive</button>` : html`<span></span>`}<span class="row"><button type="button" class="btn sec" onClick=${() => setF(null)}>Cancel</button><button class="btn">Save</button></span></div>
+      </form><//>`}`;
+}
+
+// ───────────────────────── Inventory ─────────────────────────
+function Inventory({ s }) {
+  const [q, setQ] = useState('');
+  const [low, setLow] = useState(false);
+  const [edit, setEdit] = useState(null);
+  const [mv, setMv] = useState(null);
+  const [hist, setHist] = useState(null);
+  const all = s.products.filter((p) => p.active !== false);
+  const cats = [...new Set(all.map((p) => p.category))].sort();
+  const list = all.filter((p) => (!low || p.stock <= p.reorderLevel) && `${p.name} ${p.sku || ''} ${p.category}`.toLowerCase().includes(q.toLowerCase())).sort(byName);
+  const lowN = all.filter((p) => p.stock <= p.reorderLevel).length;
+  const histP = hist && s.products.find((p) => p.id === hist);
+  return html`
+    <${Head} title="Inventory" sub="Retail products and salon supplies. Sales on bills reduce stock automatically."><button class="btn" onClick=${() => setEdit({ name: '', sku: '', category: cats[0] || 'Hair Care', supplier: '', costPrice: 0, price: '', reorderLevel: 5, unit: 'pcs', stock: 0 })}>+ Add product</button><//>
+    <div class="grid g4" style="margin-bottom:16px"><${Stat} k="Products" v=${all.length} /><${Stat} k="Need reordering" v=${lowN} tone=${lowN ? 'warn' : 'good'} n="At or below reorder level" /><${Stat} k="Stock value at cost" v=${money0(all.reduce((a, p) => a + p.stock * (p.costPrice || 0), 0))} /></div>
+    <div class="row" style="margin-bottom:12px"><input class="in" id="iv-q" style="max-width:300px" placeholder="Search name, SKU or category" aria-label="Search products" value=${q} onInput=${(e) => setQ(e.target.value)} /><label class="check"><input type="checkbox" id="iv-low" checked=${low} onChange=${(e) => setLow(e.target.checked)} />Only items to reorder</label></div>
+    <${Card} pad=${false}>${list.length ? html`<div class="tw"><table><thead><tr><th>Product</th><th>Category</th><th class="r">Cost</th><th class="r">Price</th><th class="r">Margin</th><th class="r">In stock</th><th></th></tr></thead><tbody>
+      ${list.map((p) => html`<tr><td><b>${p.name}</b><div class="m">${[p.sku, p.supplier].filter(Boolean).join(' · ') || '—'}</div></td><td class="m">${p.category}</td><td class="r tab m">${money(p.costPrice)}</td><td class="r tab">${money(p.price)}</td><td class="r tab m">${p.price > 0 ? Math.round(((p.price - (p.costPrice || 0)) / p.price) * 100) + '%' : '—'}</td>
+        <td class="r"><b class="tab">${p.stock} ${p.unit}</b>${p.stock <= p.reorderLevel && html`<div><span class=${'badge ' + (p.stock === 0 ? 'b-bad' : 'b-warn')}>${p.stock === 0 ? 'Out of stock' : 'Reorder'}</span></div>`}</td>
+        <td><div class="row" style="flex-wrap:nowrap;justify-content:flex-end"><button class="btn sec sm" onClick=${() => setMv({ id: p.id, type: 'IN', qty: '', note: '' })}>Stock</button><button class="btn ghost sm" onClick=${() => setHist(p.id)}>History</button><button class="btn ghost sm" onClick=${() => setEdit({ ...p })}>Edit</button></div></td></tr>`)}
+      </tbody></table></div>` : html`<${Empty} title=${all.length ? 'No products match' : 'No products yet'}>${all.length ? '' : 'Add the retail products and supplies you stock.'}<//>`}<//>
+    ${edit && html`<${Modal} title=${edit.id ? 'Edit product' : 'Add product'} onClose=${() => setEdit(null)}>
+      <form class="form" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+          if (!edit.name.trim()) throw new Problem('Enter the product name.');
+          const price = Number(edit.price); if (edit.price === '' || !(price >= 0)) throw new Problem('Enter a selling price.');
+          if (edit.sku && s.products.some((p) => p.id !== edit.id && p.sku && p.sku.toLowerCase() === edit.sku.trim().toLowerCase())) throw new Problem('Another product already uses that SKU.');
+          const now = new Date().toISOString();
+          const stock = edit.id ? edit.stock : Math.max(0, parseInt(edit.stock) || 0);
+          await put('products', edit.id || newId(), { ...strip(edit), name: edit.name.trim(), sku: (edit.sku || '').trim(), category: edit.category.trim() || 'General', supplier: (edit.supplier || '').trim(), costPrice: Number(edit.costPrice) || 0, price, reorderLevel: Math.max(0, parseInt(edit.reorderLevel) || 0), unit: edit.unit.trim() || 'pcs', stock, active: true, log: edit.log || (stock ? [{ at: now, type: 'Received', change: stock, balance: stock, note: 'Opening stock' }] : []) });
+          setEdit(null); }, 'Product saved'); }}>
+        <${F} label="Product name" full><input class="in" id="pr-name" value=${edit.name} onInput=${(e) => setEdit({ ...edit, name: e.target.value })} required /><//>
+        <${F} label="Category"><input class="in" id="pr-cat" list="prod-cats" value=${edit.category} onInput=${(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="prod-cats">${cats.map((c) => html`<option value=${c} />`)}</datalist><//>
+        <${F} label="SKU"><input class="in" id="pr-sku" value=${edit.sku || ''} onInput=${(e) => setEdit({ ...edit, sku: e.target.value })} /><//>
+        <${F} label="Cost price (₹)"><input class="in" id="pr-cost" type="number" min="0" step="0.01" value=${edit.costPrice} onInput=${(e) => setEdit({ ...edit, costPrice: e.target.value })} /><//>
+        <${F} label="Selling price before GST (₹)"><input class="in" id="pr-price" type="number" min="0" step="0.01" value=${edit.price} onInput=${(e) => setEdit({ ...edit, price: e.target.value })} required /><//>
+        <${F} label="Unit"><input class="in" id="pr-unit" value=${edit.unit} onInput=${(e) => setEdit({ ...edit, unit: e.target.value })} placeholder="pcs, ml, bottle" /><//>
+        <${F} label="Reorder at"><input class="in" id="pr-re" type="number" min="0" value=${edit.reorderLevel} onInput=${(e) => setEdit({ ...edit, reorderLevel: e.target.value })} /><//>
+        ${!edit.id && html`<${F} label="Opening stock"><input class="in" id="pr-open" type="number" min="0" value=${edit.stock} onInput=${(e) => setEdit({ ...edit, stock: e.target.value })} /><//>`}
+        <${F} label="Supplier" full><input class="in" id="pr-sup" value=${edit.supplier || ''} onInput=${(e) => setEdit({ ...edit, supplier: e.target.value })} /><//>
+        <div class="actions full" style="margin:0;justify-content:space-between">${edit.id ? html`<button type="button" class="btn danger" onClick=${() => write(async () => { await patch('products', edit.id, { active: false }); setEdit(null); }, 'Product archived')}>Archive</button>` : html`<span></span>`}<span class="row"><button type="button" class="btn sec" onClick=${() => setEdit(null)}>Cancel</button><button class="btn">Save product</button></span></div>
+      </form><//>`}
+    ${mv && (() => { const p = s.products.find((x) => x.id === mv.id); return html`<${Modal} title=${`Update stock · ${p.name}`} onClose=${() => setMv(null)}>
+      <form onSubmit=${(e) => { e.preventDefault(); write(async () => {
+          const n = parseInt(mv.qty); if (!(n >= 0) || mv.qty === '') throw new Problem('Enter a quantity.');
+          const change = mv.type === 'IN' ? n : mv.type === 'OUT' ? -n : n - p.stock;
+          if (mv.type !== 'ADJUST' && n === 0) throw new Problem('Enter a quantity above zero.');
+          if (p.stock + change < 0) throw new Problem(`Only ${p.stock} ${p.unit} in stock.`);
+          if (change === 0) throw new Problem('The count matches the current stock. Nothing to change.');
+          const stock = p.stock + change;
+          await patch('products', p.id, { stock, log: [{ at: new Date().toISOString(), type: { IN: 'Received', OUT: 'Used / removed', ADJUST: 'Count correction' }[mv.type], change, balance: stock, note: mv.note.trim() }, ...(p.log || [])].slice(0, 40) });
+          setMv(null); }, 'Stock updated'); }}>
+        <p class="m" style="margin-top:0">Currently ${p.stock} ${p.unit} in stock.</p>
+        <div class="seg" style="margin-bottom:12px">${[['IN', 'Received'], ['OUT', 'Used / removed'], ['ADJUST', 'Set count']].map(([k, t]) => html`<button type="button" aria-pressed=${mv.type === k} onClick=${() => setMv({ ...mv, type: k })}>${t}</button>`)}</div>
+        <div class="form"><${F} label=${mv.type === 'ADJUST' ? 'Actual count on the shelf' : 'Quantity'}><input class="in" id="mv-qty" type="number" min="0" value=${mv.qty} onInput=${(e) => setMv({ ...mv, qty: e.target.value })} required /><//>
+        <${F} label="Note"><input class="in" id="mv-note" value=${mv.note} onInput=${(e) => setMv({ ...mv, note: e.target.value })} placeholder=${mv.type === 'IN' ? 'Supplier bill number' : 'Used in salon, damaged, expired'} /><//></div>
+        <div class="actions"><button type="button" class="btn sec" onClick=${() => setMv(null)}>Cancel</button><button class="btn">Update stock</button></div></form><//>`; })()}
+    ${histP && html`<${Modal} title=${`Stock history · ${histP.name}`} onClose=${() => setHist(null)}>
+      ${(histP.log || []).length ? html`<ul class="list">${histP.log.map((l) => html`<li class="row" style="justify-content:space-between;padding:8px 0"><div><b>${l.type}</b><div class="m">${fmtDT(l.at)}${l.note && ` · ${l.note}`}</div></div><div class="tab" style="text-align:right"><span style=${l.change > 0 ? 'color:var(--good)' : 'color:var(--bad)'}>${l.change > 0 ? '+' : ''}${l.change}</span><div class="m">→ ${l.balance}</div></div></li>`)}</ul>` : html`<p class="m">No stock changes yet.</p>`}<//>`}`;
+}
+
+// ───────────────────────── Expenses ─────────────────────────
+const EXP_CATS = ['Rent', 'Salaries', 'Utilities', 'Product restock', 'Laundry', 'Marketing', 'Refreshments', 'Maintenance'];
+function Expenses({ s }) {
+  const [month, setMonth] = useState(isoDate().slice(0, 7));
+  const [f, setF] = useState(null);
+  const from = month + '-01', to = monthEnd(from);
+  const list = s.expenses.filter((e) => e.date >= from && e.date <= to).sort((a, b) => b.date.localeCompare(a.date));
+  const total = list.reduce((a, e) => a + e.amount, 0);
+  const byCat = Object.entries(list.reduce((m, e) => ({ ...m, [e.category]: (m[e.category] || 0) + e.amount }), {})).sort((a, b) => b[1] - a[1]);
+  const cats = [...new Set([...EXP_CATS, ...s.expenses.map((e) => e.category)])].sort();
+  const today = isoDate();
+  return html`
+    <${Head} title="Expenses" sub=${`${fmtDate(from, { month: 'long', year: 'numeric' })} · ${money0(total)} spent`}><button class="btn" onClick=${() => setF({ date: today.startsWith(month) ? today : from, category: cats[0], description: '', amount: '', method: 'UPI', vendor: '' })}>+ Record expense</button><//>
+    <input type="month" class="in" id="ex-month" style="width:auto;margin-bottom:12px" aria-label="Month" value=${month} onInput=${(e) => e.target.value && setMonth(e.target.value)} />
+    <div class="grid gside">
+      <${Card} pad=${false}>${list.length ? html`<div class="tw"><table><thead><tr><th>Date</th><th>Expense</th><th>Paid via</th><th class="r">Amount</th></tr></thead><tbody>
+        ${list.map((e) => html`<tr class="click" onClick=${() => setF({ ...e })}><td class="m" style="white-space:nowrap">${fmtDate(e.date, { day: 'numeric', month: 'short' })}</td><td><b>${e.description}</b><div class="m">${[e.category, e.vendor].filter(Boolean).join(' · ')}</div></td><td class="m">${e.method}</td><td class="r tab"><b>${money(e.amount)}</b></td></tr>`)}
+        </tbody></table></div>` : html`<${Empty} title="No expenses this month">Record rent, salaries, supplies and other costs with Record expense.<//>`}<//>
+      <${Card} title="By category">${byCat.length ? byCat.map(([c, a]) => html`<div style="margin-bottom:12px"><div class="sumrow"><span>${c}</span><b class="tab">${money0(a)}</b></div><div class="bar"><i style=${`width:${(a / total) * 100}%`}></i></div></div>`) : html`<span class="m">Nothing recorded this month.</span>`}<//>
+    </div>
+    ${f && html`<${Modal} title=${f.id ? 'Edit expense' : 'Record expense'} onClose=${() => setF(null)}>
+      <form class="form" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+          const amount = Number(f.amount); if (!(amount > 0)) throw new Problem('Enter an amount above zero.');
+          if (!f.description.trim()) throw new Problem('Say what the expense was for.');
+          if (!f.category.trim()) throw new Problem('Pick a category.');
+          await put('expenses', f.id || newId(), { date: f.date, category: f.category.trim(), description: f.description.trim(), amount, method: f.method, vendor: (f.vendor || '').trim() });
+          setF(null); }, 'Expense saved'); }}>
+        <${F} label="What was it for" full><input class="in" id="ef-desc" value=${f.description} onInput=${(e) => setF({ ...f, description: e.target.value })} placeholder="Electricity bill for October" required /><//>
+        <${F} label="Amount (₹)"><input class="in" id="ef-amt" type="number" min="1" step="0.01" value=${f.amount} onInput=${(e) => setF({ ...f, amount: e.target.value })} required /><//>
+        <${F} label="Date"><input class="in" id="ef-date" type="date" value=${f.date} onInput=${(e) => setF({ ...f, date: e.target.value })} required /><//>
+        <${F} label="Category" hint="Pick one or type a new category"><input class="in" id="ef-cat" list="exp-cats" value=${f.category} onInput=${(e) => setF({ ...f, category: e.target.value })} /><datalist id="exp-cats">${cats.map((c) => html`<option value=${c} />`)}</datalist><//>
+        <${F} label="Paid via"><select class="in" id="ef-m" value=${f.method} onChange=${(e) => setF({ ...f, method: e.target.value })}>${METHODS.map((m) => html`<option>${m}</option>`)}</select><//>
+        <${F} label="Paid to" full><input class="in" id="ef-v" value=${f.vendor || ''} onInput=${(e) => setF({ ...f, vendor: e.target.value })} /><//>
+        <div class="actions full" style="margin:0;justify-content:space-between">${f.id ? html`<button type="button" class="btn danger" onClick=${() => write(async () => { await DB.doc('expenses/' + f.id).delete(); setF(null); }, 'Expense deleted')}>Delete</button>` : html`<span></span>`}<span class="row"><button type="button" class="btn sec" onClick=${() => setF(null)}>Cancel</button><button class="btn">Save expense</button></span></div>
+      </form><//>`}`;
+}
+
+// ───────────────────────── Reports ─────────────────────────
+const PRESETS = { today: 'Today', week: 'This week', month: 'This month', lastmonth: 'Last month', year: 'This year' };
+function period(key) {
+  const t = isoDate();
+  if (key === 'today') return [t, t];
+  if (key === 'week') return [weekStart(t), addDays(weekStart(t), 6)];
+  if (key === 'lastmonth') { const s = monthStart(addDays(monthStart(t), -1)); return [s, monthEnd(s)]; }
+  if (key === 'year') return [t.slice(0, 4) + '-01-01', t.slice(0, 4) + '-12-31'];
+  return [monthStart(t), monthEnd(t)];
+}
+function Reports({ s }) {
+  const [key, setKey] = useState('month');
+  const [custom, setCustom] = useState(null);
+  const [from, to] = custom || period(key);
+  const inRange = (iso) => { const d = isoDate(new Date(iso)); return d >= from && d <= to; };
+  const invs = s.invoices.filter((i) => i.status !== 'Void' && inRange(i.createdAt));
+  const pays = s.invoices.filter((i) => i.status !== 'Void').flatMap((i) => (i.payments || []).filter((p) => inRange(p.at)));
+  const exps = s.expenses.filter((e) => e.date >= from && e.date <= to);
+  const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+  const sales = sum(invs.map((i) => i.total)), tax = sum(invs.map((i) => i.tax)), net = sales - tax, spent = sum(exps.map((e) => e.amount));
+  const days = Math.round((parseDate(to) - parseDate(from)) / 864e5) + 1, byMonth = days > 62;
+  const buckets = new Map();
+  if (byMonth) { for (let d = from; d <= to; d = addDays(d, 28)) buckets.set(d.slice(0, 7), 0); buckets.set(to.slice(0, 7), buckets.get(to.slice(0, 7)) || 0); }
+  else for (let i = 0; i < days; i++) buckets.set(addDays(from, i), 0);
+  invs.forEach((i) => { const k = byMonth ? isoDate(new Date(i.createdAt)).slice(0, 7) : isoDate(new Date(i.createdAt)); buckets.set(k, (buckets.get(k) || 0) + i.total - i.tax); });
+  const chart = [...buckets].map(([k, v]) => ({ label: byMonth ? fmtDate(k + '-01', { month: 'short' }) : fmtDate(k, { day: 'numeric', month: 'short' }), value: v }));
+  const group = (xs, kf, vf) => { const m = new Map(); xs.forEach((x) => { const k = kf(x), v = vf(x), c = m.get(k) || { key: k, qty: 0, value: 0 }; m.set(k, { key: k, qty: c.qty + v.qty, value: c.value + v.value }); }); return [...m.values()].sort((a, b) => b.value - a.value); };
+  const items = invs.flatMap((i) => i.items);
+  const staffMap = Object.fromEntries(s.staff.map((x) => [x.id, x]));
+  const perf = group(items.filter((i) => i.kind === 'service' && i.staffId), (i) => i.staffId, (i) => ({ qty: i.qty, value: i.total - i.tax }));
+  const Break = ({ title, rows, unit }) => { const max = Math.max(1, ...rows.map((r) => r.value)); return html`<${Card} title=${title}>${rows.length ? rows.slice(0, 8).map((r) => html`<div style="margin-bottom:12px"><div class="sumrow"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.key}</span><span class="tab" style="white-space:nowrap"><span class="m">${r.qty} ${unit} · </span><b>${money0(r.value)}</b></span></div><div class="bar"><i style=${`width:${(r.value / max) * 100}%`}></i></div></div>`) : html`<span class="m">Nothing in this period.</span>`}<//>`; };
+  const csv = (rows) => rows.map((r) => r.map((v) => { if (typeof v === 'number') return String(v); const x = /^[=+\-@]/.test(v) ? "'" + v : v; return /[",\n']/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; }).join(',')).join('\r\n');
+  const exportBills = () => download(`bills-${from}-to-${to}.csv`, '﻿' + csv([['Bill', 'Date', 'Client', 'Mobile', 'Status', 'Subtotal', 'Discount', 'Taxable value', 'CGST', 'SGST', 'Total', 'Paid', 'Due'],
+    ...s.invoices.filter((i) => inRange(i.createdAt)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map((i) => [i.number, isoDate(new Date(i.createdAt)), i.customerName, i.customerPhone, i.status, round2(i.subtotal), round2(i.discount), round2(i.subtotal - i.discount), round2(i.tax / 2), round2(i.tax / 2), round2(i.total), round2(i.paid), i.status === 'Void' ? 0 : round2(i.total - i.paid)])]), 'text/csv');
+  const exportExp = () => download(`expenses-${from}-to-${to}.csv`, '﻿' + csv([['Date', 'Category', 'Description', 'Paid to', 'Method', 'Amount'], ...exps.sort((a, b) => a.date.localeCompare(b.date)).map((e) => [e.date, e.category, e.description, e.vendor || '', e.method, round2(e.amount)])]), 'text/csv');
+  return html`
+    <${Head} title="Reports" sub=${`${fmtDate(from)} to ${fmtDate(to)}`}><button class="btn sec" onClick=${exportBills}>Export bills (CSV)</button><button class="btn sec" onClick=${exportExp}>Export expenses (CSV)</button><//>
+    <div class="row" style="margin-bottom:16px">${Object.entries(PRESETS).map(([k, t]) => html`<button class=${'btn sm ' + (!custom && key === k ? '' : 'sec')} onClick=${() => { setCustom(null); setKey(k); }}>${t}</button>`)}
+      <input type="date" class="in" id="rp-from" style="width:auto;padding:5px 8px" aria-label="From" value=${from} onInput=${(e) => e.target.value && setCustom([e.target.value, to < e.target.value ? e.target.value : to])} /><span class="m">to</span><input type="date" class="in" id="rp-to" style="width:auto;padding:5px 8px" aria-label="To" value=${to} onInput=${(e) => e.target.value && setCustom([from > e.target.value ? e.target.value : from, e.target.value])} /></div>
+    <div class="grid g4" style="margin-bottom:16px">
+      <${Stat} k="Sales before GST" v=${money0(net)} n=${`${plural(invs.length, 'bill')} · ${money0(sum(invs.map((i) => i.discount)))} discounts`} />
+      <${Stat} k="Expenses" v=${money0(spent)} n=${plural(exps.length, 'entry', 'entries')} />
+      <${Stat} k="Profit" v=${money0(net - spent)} n="Sales before GST minus expenses" tone=${net - spent < 0 ? 'warn' : 'good'} />
+      <${Stat} k="Collected" v=${money0(sum(pays.map((p) => p.amount)))} n=${`GST billed ${money0(tax)} · Dues ${money0(sum(invs.map((i) => i.total - i.paid)))}`} />
+    </div>
+    <${Card} title=${byMonth ? 'Sales by month (before GST)' : 'Sales by day (before GST)'} style="margin-bottom:16px">${invs.length ? html`<${BarChart} data=${chart} height=${200} />` : html`<${Empty} title="No sales in this period" />`}<//>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <${Card} title="Staff performance" pad=${false}>${perf.length ? html`<div class="tw"><table><thead><tr><th>Stylist</th><th class="r">Services</th><th class="r">Revenue</th><th class="r">Commission</th></tr></thead><tbody>${perf.map((r) => { const st = staffMap[r.key]; const rate = st?.commissionRate || 0; return html`<tr><td><b>${st?.name || 'Former staff'}</b></td><td class="r tab">${r.qty}</td><td class="r tab">${money0(r.value)}</td><td class="r tab">${money0((r.value * rate) / 100)}<div class="m">${rate}%</div></td></tr>`; })}</tbody></table></div>` : html`<${Empty} title="No services billed with a stylist" />`}<//>
+      <${Break} title="Top services" rows=${group(items.filter((i) => i.kind === 'service'), (i) => i.name, (i) => ({ qty: i.qty, value: i.total - i.tax }))} unit="sold" />
+      <${Break} title="Top products" rows=${group(items.filter((i) => i.kind === 'product'), (i) => i.name, (i) => ({ qty: i.qty, value: i.total - i.tax }))} unit="units" />
+      <${Break} title="Payments by method" rows=${group(pays, (p) => p.method, (p) => ({ qty: 1, value: p.amount }))} unit="payments" />
+      <${Break} title="Expenses by category" rows=${group(exps, (e) => e.category, (e) => ({ qty: 1, value: e.amount }))} unit="entries" />
+    </div>`;
+}
+
+// ───────────────────────── Settings ─────────────────────────
+function Setup({ s }) {
+  const [f, setF] = useState(s.settings);
+  // Show settings saved elsewhere, but never undo an edit in progress when the screen first opens.
+  const seen = useRef(s.settings);
+  useEffect(() => { if (seen.current !== s.settings) { seen.current = s.settings; setF(s.settings); } }, [s.settings]);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return html`
+    <${Head} title="Settings" sub="Business details printed on bills, the GST rate, and opening hours." />
+    <${Card} title="Business details" style="max-width:760px">
+      <form class="form" onSubmit=${(e) => { e.preventDefault(); write(async () => {
+          if (!f.name.trim()) throw new Problem('Enter the business name.');
+          const gstin = (f.gstin || '').trim().toUpperCase();
+          if (gstin && !/^[0-9]{2}[A-Z0-9]{13}$/.test(gstin)) throw new Problem('GSTIN should be 15 characters, like 06ABCDE1234F1Z5.');
+          if (toMin(f.closeTime) <= toMin(f.openTime)) throw new Problem('Closing time must be after opening time.');
+          const next = parseInt(f.nextInvoiceNo); if (!(next >= 1)) throw new Problem('Next bill number must be 1 or more.');
+          const prefix = (f.invoicePrefix || '').trim();
+          if (s.invoices.some((i) => i.number === prefix + next)) throw new Problem(`Bill ${prefix}${next} already exists. Choose a higher next number.`);
+          await DB.doc('config/settings').set({ ...f, name: f.name.trim(), gstin, gstRate: Number(f.gstRate), invoicePrefix: prefix, nextInvoiceNo: next });
+        }, 'Settings saved'); }}>
+        <${F} label="Business name" full><input class="in" id="sg-name" value=${f.name} onInput=${set('name')} required /><//>
+        <${F} label="Address" full hint="Printed on bills"><input class="in" id="sg-addr" value=${f.address} onInput=${set('address')} /><//>
+        <${F} label="Phone"><input class="in" id="sg-phone" value=${f.phone} onInput=${set('phone')} /><//>
+        <${F} label="Email"><input class="in" id="sg-email" value=${f.email} onInput=${set('email')} /><//>
+        <${F} label="GST rate on bills" hint="Used on every bill that charges GST. Any bill can also be made without GST."><select class="in" id="sg-gst" value=${f.gstRate} onChange=${(e) => setF({ ...f, gstRate: Number(e.target.value) })}>${GST_RATES.map((r) => html`<option value=${r}>${r}%</option>`)}</select><//>
+        <${F} label="GSTIN" hint="Leave blank if not registered"><input class="in" id="sg-gstin" style="text-transform:uppercase" value=${f.gstin} onInput=${set('gstin')} /><//>
+        <${F} label="Opens at"><input class="in" id="sg-open" type="time" value=${f.openTime} onInput=${set('openTime')} /><//>
+        <${F} label="Closes at"><input class="in" id="sg-close" type="time" value=${f.closeTime} onInput=${set('closeTime')} /><//>
+        <${F} label="Bill number prefix"><input class="in" id="sg-prefix" value=${f.invoicePrefix} onInput=${set('invoicePrefix')} /><//>
+        <${F} label="Next bill number" hint=${`Next bill will be ${f.invoicePrefix}${f.nextInvoiceNo}`}><input class="in" id="sg-next" type="number" min="1" value=${f.nextInvoiceNo} onInput=${set('nextInvoiceNo')} /><//>
+        <${F} label="Message at the bottom of bills" full><input class="in" id="sg-foot" value=${f.footer} onInput=${set('footer')} /><//>
+        <div class="actions full" style="margin:0"><button class="btn">Save settings</button></div>
+      </form>
+      <p class="m" style="margin-bottom:0">Who can change things is set from this page's Share menu: Contributors and Editors can make changes, Viewers can only look.</p>
+    <//>`;
+}
+
+// ───────────────────────── App shell ─────────────────────────
+const NAV = [['today', 'Today'], ['appointments', 'Appointments'], ['billing', 'Billing'], ['clients', 'Clients'], ['services', 'Services'], ['staff', 'Staff'], ['inventory', 'Inventory'], ['expenses', 'Expenses'], ['reports', 'Reports'], ['setup', 'Settings']];
+const SCREENS = { today: Today, appointments: Appointments, billing: Billing, newbill: NewBill, clients: Clients, services: Services, staff: Staff, inventory: Inventory, expenses: Expenses, reports: Reports, setup: Setup };
+const routeFromHash = () => { const h = location.hash.slice(1); return SCREENS[h] ? h : 'today'; };
+
+function App() {
+  const s = useStore();
+  const [route, setRoute] = useState(routeFromHash());
+  const [params, setParams] = useState(null);
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { const f = () => setRoute(routeFromHash()); addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
+  const go = (r, p = null) => { setParams(p ? { ...p, t: Date.now() } : null); setRoute(r); setMenu(false); try { history.replaceState(null, '', '#' + r); } catch (e) {} scrollTo(0, 0); };
+  const Screen = SCREENS[route];
+  const navKey = route === 'newbill' ? 'billing' : route;
+  return html`<div class="app">
+    <div class="topbar"><span style="font-family:var(--display);font-size:17px">${s.settings.name}</span><button class="btn sec sm" onClick=${() => setMenu(true)} aria-label="Open menu">Menu</button></div>
+    ${menu && html`<div style="position:fixed;inset:0;z-index:39;background:rgb(0 0 0 / .3)" onClick=${() => setMenu(false)}></div>`}
+    <aside class=${'side' + (menu ? ' open' : '')}>
+      <div class="brand"><div class="eyebrow">Salon Studio</div><div class="salon">${s.settings.name}</div></div>
+      <nav class="nav" aria-label="Screens">${NAV.map(([k, t]) => html`<a href=${'#' + k} aria-current=${navKey === k ? 'page' : undefined} onClick=${(e) => { e.preventDefault(); go(k); }}>${t}</a>`)}</nav>
+      <div class="side-foot">${s.readOnly ? 'View only' : 'Changes save for everyone with access'}</div>
+    </aside>
+    <main><div class="wrap">
+      ${s.offline && html`<div class="notice">${s.ready ? 'Can\'t reach the salon database right now. What you see may be out of date.' : 'Can\'t reach the salon database yet. Open this page in Claude while signed in to see your records.'}</div>`}
+      ${s.readOnly && html`<div class="notice">You can view this page but not change it. Ask the owner for Contributor access to book and bill.</div>`}
+      ${s.ready ? html`<${Screen} s=${s} go=${go} params=${params} key=${route} />` : html`<div class="empty"><b>Loading salon records…</b></div>`}
+    </div></main>
+    <${Toasts} />
+  </div>`;
+}
+
+render(html`<${App} />`, document.getElementById('app'));
+startData();
+</script>
