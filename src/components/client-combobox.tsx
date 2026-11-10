@@ -50,13 +50,13 @@ export function ClientCombobox({ clients, value, onChange, onNew, disabled, id =
   return (
     <div ref={box} className="relative">
       <button type="button" id={id} disabled={disabled} onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}
-        className={cx('input flex min-h-[46px] items-center gap-3 text-left', disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:border-stone-400', open && 'border-violet-500 ring-2 ring-violet-500/20')}>
+        className={cx('input flex items-center gap-2.5 text-left', disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:border-stone-400', open && 'border-violet-500 ring-2 ring-violet-500/20')}>
         {selected ? (
           <>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[12px] font-bold text-violet-700">{initials(selected.name)}</span>
-            <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{selected.name}</span><span className="block text-[12.5px] text-ink-mute">{selected.phone}</span></span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[11px] font-bold text-violet-700">{initials(selected.name)}</span>
+            <span className="min-w-0 flex-1 truncate"><span className="font-semibold">{selected.name}</span><span className="ml-2 text-[13px] text-ink-mute">{selected.phone}</span></span>
           </>
-        ) : <span className="flex-1 text-ink-mute">Select a client</span>}
+        ) : <span className="flex-1 text-ink-mute">Search or select a client</span>}
         {!disabled && <ChevronDown size={17} className={cx('shrink-0 text-ink-mute transition-transform', open && 'rotate-180')} />}
       </button>
 
@@ -72,7 +72,7 @@ export function ClientCombobox({ clients, value, onChange, onNew, disabled, id =
                 else if (e.key === 'Enter') { e.preventDefault(); if (options) pick(active); }
                 else if (e.key === 'Escape') setOpen(false);
               }}
-              className="w-full rounded-lg bg-stone-50 py-2 pl-9 pr-3 text-[14px] outline-none ring-1 ring-inset ring-line focus:ring-violet-400" />
+              className="h-10 w-full rounded-lg bg-stone-50 pl-9 pr-3 text-[14px] outline-none ring-1 ring-inset ring-line focus:ring-violet-400" />
           </div>
           <ul ref={list} id={`${id}-list`} role="listbox" className="max-h-72 overflow-y-auto py-1">
             {matches.length === 0 && <li className="px-4 py-3 text-[13.5px] text-ink-mute">No client matches &quot;{q}&quot;.</li>}

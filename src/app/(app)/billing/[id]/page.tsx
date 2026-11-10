@@ -91,7 +91,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
 
           <table className="mt-5 w-full border-collapse text-[9.5pt]">
             <thead>
-              <tr className="bg-violet-600 text-left text-[8.5pt] uppercase tracking-[0.06em] text-white">
+              <tr className="text-left text-[8.5pt] uppercase tracking-[0.06em] text-white [&>th]:bg-violet-600 [&>th]:shadow-[1px_0_0_#7c3aed]">
                 <th className="rounded-l-md px-3 py-2 font-semibold">#</th>
                 <th className="px-3 py-2 font-semibold">Description</th>
                 <th className="px-3 py-2 text-right font-semibold">Qty</th>

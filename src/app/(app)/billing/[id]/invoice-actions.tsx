@@ -9,16 +9,21 @@ import { money, round2 } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
 import { addPayment, voidInvoice } from '../actions';
 
-/** Renders the A4 sheet to a PDF file named after the bill, splitting onto more pages if it runs long. */
+/**
+ * Renders the A4 sheet to a PDF named after the bill. The browser itself draws the sheet
+ * (via an SVG snapshot), so the PDF matches the screen exactly. Long bills continue on more pages.
+ */
 async function downloadPdf(number: string) {
   const sheet = document.getElementById('invoice-sheet');
   if (!sheet) return;
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
-  const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  const [{ toJpeg }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
+  await document.fonts.ready;
+  const opts = { pixelRatio: 2.5, backgroundColor: '#ffffff', quality: 0.95, style: { boxShadow: 'none', margin: '0' } };
+  await toJpeg(sheet, opts); // first pass loads fonts and images into the snapshot
+  const img = await toJpeg(sheet, opts);
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const pageW = 210, pageH = 297;
-  const imgH = (canvas.height * pageW) / canvas.width;
-  const img = canvas.toDataURL('image/jpeg', 0.95);
+  const imgH = (sheet.offsetHeight * pageW) / sheet.offsetWidth;
   for (let y = 0, page = 0; y < imgH - 0.5; y += pageH, page++) {
     if (page) pdf.addPage();
     pdf.addImage(img, 'JPEG', 0, -y, pageW, imgH);

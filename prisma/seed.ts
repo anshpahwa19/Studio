@@ -192,7 +192,7 @@ async function main() {
     const number = `SP${next++}`;
     const inv = await db.invoice.create({
       data: {
-        number, customerId: opts.customerId, branchId: opts.branchId, appointmentId: opts.appointmentId,
+        number, createdBy: 'Shruti Pahwa', customerId: opts.customerId, branchId: opts.branchId, appointmentId: opts.appointmentId,
         subtotal: calc.subtotal, discountType: opts.discount?.type ?? null, discountValue: opts.discount?.value ?? 0,
         discount: calc.discount, tax: calc.tax, total: calc.total, paid, status: invoiceStatus(calc.total, paid), createdAt,
         items: {
