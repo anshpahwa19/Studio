@@ -6,11 +6,15 @@ import { ExpenseList } from './expense-list';
 
 const DEFAULT_CATEGORIES = ['Rent', 'Salaries', 'Utilities', 'Product restock', 'Laundry', 'Marketing', 'Refreshments', 'Maintenance'];
 
-export default async function ExpensesPage({ searchParams }: { searchParams: { month?: string; new?: string; branch?: string } }) {
+export default async function ExpensesPage({ searchParams }: { searchParams: { from?: string; to?: string; new?: string; branch?: string } }) {
   await requirePage('expenses');
-  const month = /^\d{4}-\d{2}$/.test(searchParams.month ?? '') ? searchParams.month! : isoDate().slice(0, 7);
-  const from = `${month}-01`;
-  const to = monthEnd(from);
+  const isDate = (d?: string) => /^\d{4}-\d{2}-\d{2}$/.test(d ?? '');
+  // Defaults to the current month; any from and to dates can be chosen.
+  let from = isDate(searchParams.from) ? searchParams.from! : `${isoDate().slice(0, 7)}-01`;
+  let to = isDate(searchParams.to) ? searchParams.to! : monthEnd(from);
+  if (to < from) [from, to] = [to, from];
+  const isMonth = from.endsWith('-01') && to === monthEnd(from);
+  const periodLabel = isMonth ? fmtDate(from, { month: 'long', year: 'numeric' }) : from === to ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`;
   const allBranches = await db.branch.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
   const branch = allBranches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
   const inBranch = branch ? { branchId: branch } : {};
@@ -30,12 +34,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { m
 
   return (
     <>
-      <PageHeader title="Business Expenses" subtitle={`${fmtDate(from, { month: 'long', year: 'numeric' })} · ${money0(total)} spent · ${allBranches.find((b) => b.id === branch)?.name ?? 'All branches'}`} />
+      <PageHeader title="Business Expenses" subtitle={`${periodLabel} · ${money0(total)} spent · ${allBranches.find((b) => b.id === branch)?.name ?? 'All branches'}`} />
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_280px]">
-        <ExpenseList autoOpen={searchParams.new === '1'} month={month} branch={branch} allBranches={allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }))} expenses={expenses} categories={categories} branches={branches} />
+        <ExpenseList autoOpen={searchParams.new === '1'} from={from} to={to} branch={branch} allBranches={allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }))} expenses={expenses} categories={categories} branches={branches} />
         <div className="space-y-6">
         {allBranches.length > 0 && (
-          <Card title="By branch" subtitle="This month, all branches">
+          <Card title="By branch" subtitle="This period, all branches">
             <ul className="space-y-3">
               {perBranch.map((b) => (
                 <li key={b.id ?? 'none'}>
@@ -48,7 +52,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { m
           </Card>
         )}
         <Card title="By category">
-          {byCategory.length === 0 ? <p className="text-ink-mute">Nothing recorded this month.</p> : (
+          {byCategory.length === 0 ? <p className="text-ink-mute">Nothing recorded in this period.</p> : (
             <ul className="space-y-3">
               {byCategory.map(([c, amt]) => (
                 <li key={c}>

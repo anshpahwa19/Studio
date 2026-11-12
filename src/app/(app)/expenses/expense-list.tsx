@@ -11,19 +11,22 @@ import { deleteExpense, saveExpense, type ExpenseInput } from './actions';
 
 type Expense = { id: string; date: string; category: string; description: string; amount: number; method: string; vendor: string | null; branchId: string | null; branch: { name: string } | null };
 
-export function ExpenseList({ month, branch, allBranches, expenses, categories, branches, autoOpen = false }: { month: string; branch: string; allBranches: { id: string; name: string }[]; expenses: Expense[]; categories: string[]; branches: { id: string; name: string }[]; autoOpen?: boolean }) {
+export function ExpenseList({ from, to, branch, allBranches, expenses, categories, branches, autoOpen = false }: { from: string; to: string; branch: string; allBranches: { id: string; name: string }[]; expenses: Expense[]; categories: string[]; branches: { id: string; name: string }[]; autoOpen?: boolean }) {
   const router = useRouter();
   const today = isoDate();
-  const blank = (): ExpenseInput => ({ date: today.startsWith(month) ? today : `${month}-01`, category: 'General', description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch || branches[0]?.id || null });
+  const blank = (): ExpenseInput => ({ date: today >= from && today <= to ? today : to, category: 'General', description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch || branches[0]?.id || null });
   const [f, setF] = useState<ExpenseInput | null>(autoOpen ? blank() : null);
   const { run, pending } = useAction();
+  const go = (a: string, b: string, br: string) => router.push(`/expenses?from=${a}&to=${b}${br ? `&branch=${br}` : ''}`);
 
   return (
     <div className="min-w-0">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Input type="month" value={month} onChange={(e) => e.target.value && router.push(`/expenses?month=${e.target.value}${branch ? `&branch=${branch}` : ''}`)} className="w-auto" aria-label="Month" />
+        <Input type="date" value={from} max={to} onChange={(e) => e.target.value && go(e.target.value, to, branch)} className="w-auto" aria-label="From date" />
+        <span className="text-ink-mute">to</span>
+        <Input type="date" value={to} min={from} onChange={(e) => e.target.value && go(from, e.target.value, branch)} className="w-auto" aria-label="To date" />
         {allBranches.length > 0 && (
-          <Select value={branch} aria-label="Branch" className="w-[210px]" onChange={(e) => router.push(`/expenses?month=${month}${e.target.value ? `&branch=${e.target.value}` : ''}`)}>
+          <Select value={branch} aria-label="Branch" className="w-[210px]" onChange={(e) => go(from, to, e.target.value)}>
             <option value="">All branches</option>
             {allBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </Select>
@@ -33,7 +36,7 @@ export function ExpenseList({ month, branch, allBranches, expenses, categories, 
         </Button>
       </div>
       <Card pad={false}>
-        {expenses.length === 0 ? <Empty title="No expenses this month" /> : (
+        {expenses.length === 0 ? <Empty title="No expenses in this period" /> : (
           <div className="overflow-x-auto">
             <table className="table">
               <thead><tr><th>Date</th><th>Expense</th><th>Paid via</th><th className="text-right">Amount</th><th /></tr></thead>
