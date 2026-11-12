@@ -14,7 +14,7 @@ import { ClientCombobox } from '@/components/client-combobox';
 import { phoneProps } from '@/lib/validate';
 
 type Appt = {
-  id: string; date: string; startTime: string; endTime: string; status: string; walkIn: boolean; notes: string | null; staffId: string;
+  id: string; date: string; startTime: string; endTime: string; status: string; walkIn: boolean; branch: { name: string } | null; notes: string | null; staffId: string;
   customer: { id: string; name: string; phone: string }; services: { name: string; price: number }[]; invoice: { id: string; status: string } | null;
 };
 type Staff = { id: string; name: string; title: string; workDays: string; startTime: string; endTime: string };
@@ -195,7 +195,8 @@ function DayGrid({ date, appointments, staff, hours, onOpen, onSlot }: Props & {
                         <span className="truncate text-[13px] font-semibold">{a.customer.name}</span>
                         {h > 44 && <span className="shrink-0 rounded bg-white/70 px-1 text-[10.5px] font-semibold no-underline">{apptLabel(a.status)}</span>}
                       </div>
-                      {h > 40 && <div className="truncate font-medium opacity-90">{fmtTime(a.startTime)} – {fmtTime(a.endTime)}</div>}
+                      {h > 40 && <div className="truncate font-medium opacity-90">{fmtTime(a.startTime)} – {fmtTime(a.endTime)}{h <= 52 && a.branch ? ` · ${a.branch.name}` : ''}</div>}
+                      {h > 52 && a.branch && <div className="truncate text-[11.5px] font-semibold opacity-80">{a.branch.name}</div>}
                       {h > 56 && <div className="truncate opacity-90">{a.services.map((x) => x.name).join(', ')}</div>}
                       {h > 72 && <div className="truncate opacity-75">{a.customer.phone}{a.walkIn ? ' · Walk-in' : ''}</div>}
                     </button>
@@ -235,6 +236,7 @@ function WeekList({ date, appointments, staff, onOpen, onDay }: Props & { onOpen
                       </div>
                       <div className="truncate text-[13px] font-medium">{a.customer.name}</div>
                       <div className="truncate text-[12px] text-ink-mute">{names.get(a.staffId)} · {a.services.map((s) => s.name).join(', ')}</div>
+                      {a.branch && <div className="truncate text-[11.5px] font-medium text-violet-700">{a.branch.name}</div>}
                     </button>
                   </li>
                 ))}
@@ -276,6 +278,7 @@ function AppointmentDetail({ appt, onClose, staff, editable, canBill }: Props & 
         <dl className="grid grid-cols-2 gap-3 text-[13.5px]">
           <div><dt className="text-ink-mute">When</dt><dd className="font-medium">{fmtDate(appt.date, { weekday: 'short', day: 'numeric', month: 'short' })}, {fmtTime(appt.startTime)} – {fmtTime(appt.endTime)}</dd></div>
           <div><dt className="text-ink-mute">Stylist</dt><dd className="font-medium">{stylist}</dd></div>
+          {appt.branch && <div><dt className="text-ink-mute">Branch</dt><dd className="font-medium">{appt.branch.name}</dd></div>}
           <div><dt className="text-ink-mute">Mobile</dt><dd>{appt.customer.phone}</dd></div>
           <div><dt className="text-ink-mute">Service value</dt><dd className="tabular">{money0(total)} + GST</dd></div>
         </dl>

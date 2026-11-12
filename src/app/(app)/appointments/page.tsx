@@ -15,7 +15,7 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
     db.appointment.findMany({
       where: { date: { gte: from, lte: to } },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
-      include: { customer: { select: { id: true, name: true, phone: true } }, services: { select: { name: true, price: true } }, invoice: { select: { id: true, status: true } } },
+      include: { branch: { select: { name: true } }, customer: { select: { id: true, name: true, phone: true } }, services: { select: { name: true, price: true } }, invoice: { select: { id: true, status: true } } },
     }),
     db.staff.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, title: true, workDays: true, startTime: true, endTime: true } }),
     db.service.findMany({ where: { active: true }, orderBy: [{ category: { sortOrder: 'asc' } }, { name: 'asc' }], select: { id: true, name: true, price: true, duration: true, category: { select: { name: true } } } }),
