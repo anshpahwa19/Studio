@@ -88,6 +88,16 @@ export function InventoryTable({ products, suppliers, branches, branch, autoStoc
             <Field label="Reorder at"><Input type="number" min="0" value={edit.reorderLevel} onChange={(e) => setEdit({ ...edit, reorderLevel: e.target.value as unknown as number })} /></Field>
             {!edit.id && <Field label="Opening stock"><Input type="number" min="0" value={edit.openingStock ?? 0} onChange={(e) => setEdit({ ...edit, openingStock: e.target.value as unknown as number })} /></Field>}
             {!edit.id && branches.length > 0 && <Field label="Opening stock is at"><Select value={edit.openingBranchId ?? ''} onChange={(e) => setEdit({ ...edit, openingBranchId: e.target.value })}>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select></Field>}
+            {edit.id && branches.length > 0 && (() => {
+              const cur = products.find((x) => x.id === edit.id);
+              return cur && (
+                <div className="col-span-2 rounded-lg border border-line p-3">
+                  <div className="text-[12.5px] font-medium text-ink-soft">Stock by branch</div>
+                  <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[14px]">{branches.map((b) => <span key={b.id}>{b.name}: <b>{cur.byBranch[b.id] ?? 0} {cur.unit}</b></span>)}</div>
+                  <p className="mt-1 text-[12px] text-ink-mute">To add, remove or move stock for a branch, use the Stock button on the product.</p>
+                </div>
+              );
+            })()}
             <Field label="Supplier" className="col-span-2" hint={suppliers.length ? undefined : 'Add suppliers on the Suppliers page first'}>
               <Select value={edit.supplierId ?? ''} onChange={(e) => setEdit({ ...edit, supplierId: e.target.value || null })}>
                 <option value="">No supplier</option>
