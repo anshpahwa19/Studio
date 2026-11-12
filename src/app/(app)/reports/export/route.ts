@@ -12,14 +12,15 @@ export async function GET(req: NextRequest) {
   if (!user || !canView(user.role, 'reports')) return new Response('Not allowed', { status: 403 });
   const sp = Object.fromEntries(req.nextUrl.searchParams);
   const { from, to } = resolvePeriod(sp);
+  const branchId = sp.branch ? { branchId: sp.branch } : {};
   let rows: (string | number)[][];
 
   if (sp.type === 'expenses') {
-    const list = await db.expense.findMany({ where: { date: { gte: from, lte: to } }, orderBy: { date: 'asc' }, include: { branch: true } });
+    const list = await db.expense.findMany({ where: { date: { gte: from, lte: to }, ...branchId }, orderBy: { date: 'asc' }, include: { branch: true } });
     rows = [['Date', 'Category', 'Description', 'Paid to', 'Method', 'Branch', 'Amount'],
       ...list.map((e) => [e.date, e.category, e.description, e.vendor ?? '', e.method, e.branch?.name ?? '', round2(e.amount)])];
   } else {
-    const list = await db.invoice.findMany({ where: { createdAt: range(from, to) }, orderBy: { createdAt: 'asc' }, include: { customer: true, branch: true, payments: true } });
+    const list = await db.invoice.findMany({ where: { createdAt: range(from, to), ...branchId }, orderBy: { createdAt: 'asc' }, include: { customer: true, branch: true, payments: true } });
     rows = [['Bill', 'Date', 'Client', 'Mobile', 'Branch', 'Status', 'Subtotal', 'Discount', 'Taxable value', 'CGST', 'SGST', 'Total', 'Paid', 'Refunded', 'Due', 'Payment methods'],
       ...list.map((i) => [
         i.number, isoDate(i.createdAt), i.customer.name, i.customer.phone, i.branch?.name ?? '', i.status,

@@ -5,17 +5,23 @@ import { addDays, fmtDate, isoDate, money0, parseDate, plural } from '@/lib/form
 import { BarChart } from '@/components/bar-chart';
 import { Card, Empty, Input, PageHeader, Stat, cx } from '@/components/ui';
 import { PRESETS, range, resolvePeriod } from './period';
+import { BranchSelect } from './branch-select';
 
-export default async function ReportsPage({ searchParams }: { searchParams: { period?: string; from?: string; to?: string } }) {
+export default async function ReportsPage({ searchParams }: { searchParams: { period?: string; from?: string; to?: string; branch?: string } }) {
   await requirePage('reports');
   const { key, from, to } = resolvePeriod(searchParams);
   const when = range(from, to);
+  const branches = await db.branch.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
+  // One branch, or everything combined when no branch is chosen.
+  const branch = branches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
+  const inBranch = branch ? { branchId: branch } : {};
+  const branchName = branches.find((b) => b.id === branch)?.name;
 
   const [invoices, rawPayments, refunds, expenses, staff] = await Promise.all([
-    db.invoice.findMany({ where: { createdAt: when, status: { not: 'Cancelled' } }, include: { items: true } }),
-    db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' } } } }),
-    db.refund.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' } } } }),
-    db.expense.findMany({ where: { date: { gte: from, lte: to } } }),
+    db.invoice.findMany({ where: { createdAt: when, status: { not: 'Cancelled' }, ...inBranch }, include: { items: true } }),
+    db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } }, include: { invoice: { select: { branchId: true } } } }),
+    db.refund.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } }, include: { invoice: { select: { branchId: true } } } }),
+    db.expense.findMany({ where: { date: { gte: from, lte: to }, ...inBranch } }),
     db.staff.findMany({ select: { id: true, name: true, payType: true, commissionRate: true, active: true } }),
   ]);
 
@@ -50,13 +56,23 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
   const perf = group(items.filter((i) => i.kind === 'service' && i.staffId), (i) => i.staffId!, (i) => ({ qty: i.qty, value: i.total - i.tax }))
     .map((r) => { const s = staffMap.get(r.key); return { ...r, name: s?.name ?? 'Former staff', rate: s?.commissionRate ?? 0, salaried: s?.payType === 'Salary' }; });
 
-  const qs = key === 'custom' ? `from=${from}&to=${to}` : `period=${key}`;
+  // Side-by-side figures for each branch, shown when all branches are combined.
+  const compare = branch || branches.length === 0 ? [] : [...branches.map((b) => ({ id: b.id as string | null, name: b.name })), { id: null, name: 'Not assigned to a branch' }].map((b) => {
+    const inv = invoices.filter((i) => i.branchId === b.id);
+    const bNet = sum(inv.map((i) => i.total - i.tax));
+    const bSpent = sum(expenses.filter((e) => e.branchId === b.id).map((e) => e.amount));
+    const bCollected = sum(rawPayments.filter((p) => p.invoice.branchId === b.id).map((p) => p.amount)) - sum(refunds.filter((r) => r.invoice.branchId === b.id).map((r) => r.amount));
+    return { ...b, bills: inv.length, net: bNet, spent: bSpent, profit: bNet - bSpent, collected: bCollected };
+  }).filter((r) => r.id !== null || r.bills || r.spent || r.collected);
+
+  const qs = `${key === 'custom' ? `from=${from}&to=${to}` : `period=${key}`}${branch ? `&branch=${branch}` : ''}`;
+  const periodQs = branch ? `&branch=${branch}` : '';
 
   return (
     <>
       <PageHeader
         title="Reports & Analytics"
-        subtitle={`${fmtDate(from)} to ${fmtDate(to)}`}
+        subtitle={`${fmtDate(from)} to ${fmtDate(to)} · ${branchName ?? 'All branches combined'}`}
         actions={
           <>
             <a href={`/reports/export?type=invoices&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export bills (CSV)</a>
@@ -65,10 +81,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
         }
       />
       <div className="mb-5 flex flex-wrap items-center gap-2">
+        {branches.length > 0 && <BranchSelect branches={branches} value={branch} />}
         {Object.entries(PRESETS).map(([k, label]) => (
-          <Link key={k} href={`/reports?period=${k}`} className={cx('rounded-full border px-3 py-1 text-[13px] font-medium', key === k ? 'border-plum-600 bg-plum-600 text-white' : 'border-line bg-white text-ink-soft hover:bg-canvas')}>{label}</Link>
+          <Link key={k} href={`/reports?period=${k}${periodQs}`} className={cx('rounded-full border px-3 py-1 text-[13px] font-medium', key === k ? 'border-plum-600 bg-plum-600 text-white' : 'border-line bg-white text-ink-soft hover:bg-canvas')}>{label}</Link>
         ))}
         <form className="flex flex-wrap items-center gap-2">
+          {branch && <input type="hidden" name="branch" value={branch} />}
           <Input type="date" name="from" defaultValue={from} className="w-auto py-1" aria-label="From" />
           <span className="text-ink-mute">to</span>
           <Input type="date" name="to" defaultValue={to} className="w-auto py-1" aria-label="To" />
@@ -82,6 +100,36 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
         <Stat label="Profit" value={money0(net - spent)} note="Sales before GST minus expenses" tone={net - spent < 0 ? 'warn' : 'good'} />
         <Stat label="Collected" value={money0(collected)} note={`GST billed ${money0(tax)} · Dues ${money0(dues)}`} />
       </div>
+
+      {compare.length > 0 && (
+        <Card title="By branch" subtitle="Each branch for this period, with the combined total at the bottom" pad={false} className="mb-6">
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead><tr><th>Branch</th><th className="text-right">Bills</th><th className="text-right">Sales before GST</th><th className="text-right">Expenses</th><th className="text-right">Profit</th><th className="text-right">Collected</th></tr></thead>
+              <tbody>
+                {compare.map((r) => (
+                  <tr key={r.id ?? 'none'} className="hover:bg-canvas/60">
+                    <td className="font-medium">{r.id ? <Link href={`/reports?${qs}&branch=${r.id}`} className="hover:text-violet-700">{r.name}</Link> : <span className="text-ink-soft">{r.name}</span>}</td>
+                    <td className="tabular text-right">{r.bills}</td>
+                    <td className="tabular text-right">{money0(r.net)}</td>
+                    <td className="tabular text-right">{money0(r.spent)}</td>
+                    <td className={cx('tabular text-right font-medium', r.profit < 0 && 'text-amber-700')}>{money0(r.profit)}</td>
+                    <td className="tabular text-right">{money0(r.collected)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-canvas/60 font-semibold">
+                  <td>All branches combined</td>
+                  <td className="tabular text-right">{invoices.length}</td>
+                  <td className="tabular text-right">{money0(net)}</td>
+                  <td className="tabular text-right">{money0(spent)}</td>
+                  <td className={cx('tabular text-right', net - spent < 0 && 'text-amber-700')}>{money0(net - spent)}</td>
+                  <td className="tabular text-right">{money0(collected)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <Card title={byMonth ? 'Sales by month (before GST)' : 'Sales by day (before GST)'} className="mb-6">
         {invoices.length ? <BarChart data={chart} height={200} /> : <Empty title="No sales in this period" />}
