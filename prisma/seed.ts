@@ -22,6 +22,7 @@ async function wipe() {
   await db.appointment.deleteMany();
   await db.expense.deleteMany();
   await db.product.deleteMany();
+  await db.supplier.deleteMany();
   await db.service.deleteMany();
   await db.serviceCategory.deleteMany();
   await db.customer.deleteMany();
@@ -118,9 +119,11 @@ async function main() {
     ['Gel Polish Gift Trio', 'NC-002', 'Nail Care', 'Gelish', 650, 1350, 4, 6],
     ['Professional Hair Spray 300ml', 'SP-001', 'Styling', "L'Oréal Professional", 320, 650, 20, 5],
   ];
+  const suppliers: Record<string, string> = {};
+  for (const name of new Set(products.map((p) => p[3]))) suppliers[name] = (await db.supplier.create({ data: { name } })).id;
   for (const [name, sku, category, supplier, costPrice, price, stock, reorderLevel] of products) {
-    const p = await db.product.create({ data: { name, sku, category, supplier, costPrice, price, stock, reorderLevel } });
-    await db.stockMovement.create({ data: { productId: p.id, type: 'IN', change: stock, balance: stock, note: 'Opening stock' } });
+    const p = await db.product.create({ data: { name, sku, category, supplierId: suppliers[supplier], costPrice, price, stock, reorderLevel } });
+    await db.stockMovement.create({ data: { productId: p.id, type: 'IN', change: stock, balance: stock, note: 'Opening stock', supplierId: suppliers[supplier] } });
     prod[name] = p;
   }
 

@@ -59,6 +59,8 @@ Viewers can only look. Its records are separate from the desktop app's database.
 - **Staff Attendance**: punch in and punch out times only. Press Punch in / Punch out to record the current time, or Edit times to
   enter or correct them. A working day with no punch-in is Absent (today, once the shift is over). A month grid shows
   days present, days absent and hours per person. Owners, Managers and Receptionists can use it.
+- **Suppliers**: vendor contacts (phone, email, GSTIN, address). Link each product to a supplier, pick who stock was received from, and see
+  deliveries per supplier and in the monthly stock list. Owners and Managers only.
 - **Services, Staff, Inventory, Expenses**: the service menu, team hours and pay (a fixed monthly salary or a commission %), stock
   that goes down on each sale with a full history, and monthly expenses by category.
 - **Reports**: sales before GST, expenses, profit, collections by payment method, top services and products, and

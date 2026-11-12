@@ -154,12 +154,27 @@ model AppointmentService {
   service       Service     @relation(fields: [serviceId], references: [id])
 }
 
+model Supplier {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  contact   String? // contact person
+  phone     String?
+  email     String?
+  address   String?
+  gstin     String?
+  notes     String?
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  products  Product[]
+  movements StockMovement[]
+}
+
 model Product {
   id           String          @id @default(cuid())
   name         String
   sku          String?         @unique
   category     String          @default("General")
-  supplier     String?
+  supplierId   String?
   costPrice    Float           @default(0)
   price        Float
   stock        Int             @default(0)
@@ -167,6 +182,7 @@ model Product {
   unit         String          @default("pcs")
   active       Boolean         @default(true)
   createdAt    DateTime        @default(now())
+  supplierRef  Supplier?       @relation(fields: [supplierId], references: [id])
   movements    StockMovement[]
   invoiceItems InvoiceItem[]
 }
@@ -179,8 +195,10 @@ model StockMovement {
   balance   Int
   note      String?
   invoiceId String?
+  supplierId String? // who the stock was received from (IN only)
   createdAt DateTime @default(now())
   product   Product  @relation(fields: [productId], references: [id])
+  supplier  Supplier? @relation(fields: [supplierId], references: [id])
 
   @@index([productId, createdAt])
 }

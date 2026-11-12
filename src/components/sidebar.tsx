@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   BarChart3, Bell, CalendarCheck, CalendarDays, CalendarPlus, ChevronDown, ChevronLeft, LayoutDashboard, LogOut, Menu, Package, PackagePlus, Plus,
-  Receipt, Scissors, Search, Settings, UserCheck, UserPlus, Users, Wallet, X,
+  Receipt, Scissors, Search, Settings, Truck, UserCheck, UserPlus, Users, Wallet, X,
 } from 'lucide-react';
 import { SignOutDialog } from './sign-out';
 import { cx } from './ui';
@@ -14,7 +14,7 @@ type Alert = { href: string; text: string; tone: 'amber' | 'red' | 'violet' };
 
 const ICONS: Record<string, typeof Bell> = {
   '/dashboard': LayoutDashboard, '/appointments': CalendarDays, '/billing': Receipt, '/customers': Users, '/services': Scissors,
-  '/staff': UserCheck, '/attendance': CalendarCheck, '/inventory': Package, '/expenses': Wallet, '/reports': BarChart3, '/settings': Settings,
+  '/staff': UserCheck, '/attendance': CalendarCheck, '/inventory': Package, '/suppliers': Truck, '/expenses': Wallet, '/reports': BarChart3, '/settings': Settings,
 };
 
 // Title and subtitle shown in the top bar for each section.
@@ -27,6 +27,7 @@ const TITLES: [string, string, string][] = [
   ['/staff', 'Staff Management', 'Team, working hours & pay'],
   ['/attendance', 'Staff Attendance', 'Daily check-in & monthly summary'],
   ['/inventory', 'Inventory & Stock', 'Products, stock levels & reorders'],
+  ['/suppliers', 'Suppliers', 'Vendors, contacts & stock they supply'],
   ['/expenses', 'Business Expenses', 'Daily costs & vendor payments'],
   ['/reports', 'Reports & Analytics', 'Profit & loss, performance & exports'],
   ['/settings', 'Settings & Users', 'Business profile, GST & logins'],

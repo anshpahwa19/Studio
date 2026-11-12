@@ -12,7 +12,7 @@ export async function MonthlyPage({ month }: { month: string }) {
     db.product.findMany({ orderBy: { name: 'asc' } }),
     db.stockMovement.groupBy({ by: ['productId'], where: { createdAt: { lt: from } }, _sum: { change: true } }),
     db.stockMovement.groupBy({ by: ['productId', 'type'], where: { createdAt: { gte: from, lt: to } }, _sum: { change: true } }),
-    db.stockMovement.findMany({ where: { type: 'IN', createdAt: { gte: from, lt: to } }, orderBy: { createdAt: 'desc' }, include: { product: { select: { name: true, unit: true } } } }),
+    db.stockMovement.findMany({ where: { type: 'IN', createdAt: { gte: from, lt: to } }, orderBy: { createdAt: 'desc' }, include: { product: { select: { name: true, unit: true } }, supplier: { select: { name: true } } } }),
   ]);
 
   const opening = new Map(before.map((b) => [b.productId, b._sum.change ?? 0]));
@@ -67,13 +67,14 @@ export async function MonthlyPage({ month }: { month: string }) {
           {received.length === 0 ? <Empty title="No stock received this month" /> : (
             <div className="overflow-x-auto">
               <table className="table">
-                <thead><tr><th>Date</th><th>Product</th><th className="text-right">Quantity</th><th>Note</th></tr></thead>
+                <thead><tr><th>Date</th><th>Product</th><th className="text-right">Quantity</th><th>Supplier</th><th>Note</th></tr></thead>
                 <tbody>
                   {received.map((m) => (
                     <tr key={m.id} className="hover:bg-canvas/60">
                       <td className="whitespace-nowrap text-ink-soft">{fmtDate(m.createdAt, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       <td className="font-medium">{m.product.name}</td>
                       <td className={`${num} font-medium text-emerald-700`}>+{m.change} {m.product.unit}</td>
+                      <td className="text-ink-soft">{m.supplier?.name ?? '—'}</td>
                       <td className="text-ink-soft">{m.note || '—'}</td>
                     </tr>
                   ))}

@@ -12,7 +12,7 @@ const productSchema = z.object({
   name: v.required(120),
   sku: v.optional(40),
   category: v.required(60),
-  supplier: v.optional(120),
+  supplierId: v.optional(40),
   costPrice: v.money,
   price: v.money,
   reorderLevel: z.coerce.number().int().min(0).max(100000),
@@ -48,6 +48,7 @@ const moveSchema = z.object({
   type: z.enum(['IN', 'OUT', 'ADJUST']),
   qty: z.coerce.number().int().min(0).max(100000),
   note: v.optional(200),
+  supplierId: v.optional(40), // who it came from, for received stock
   date: v.date.optional(), // the day the stock changed; defaults to today
 });
 
@@ -66,8 +67,9 @@ export async function moveStock(input: z.input<typeof moveSchema>) {
       if (d.type !== 'ADJUST' && d.qty === 0) throw new ActionError('Enter a quantity above zero.');
       if (p.stock + change < 0) throw new ActionError(`Only ${p.stock} ${p.unit} in stock.`);
       if (change === 0) throw new ActionError('The count matches the current stock. Nothing to change.');
+      if (d.type === 'IN' && d.supplierId && !(await tx.supplier.findUnique({ where: { id: d.supplierId } }))) throw new ActionError('Supplier not found.');
       const updated = await tx.product.update({ where: { id: p.id }, data: { stock: { increment: change } } });
-      await tx.stockMovement.create({ data: { productId: p.id, type: d.type, change, balance: updated.stock, note: d.note, createdAt: when } });
+      await tx.stockMovement.create({ data: { productId: p.id, type: d.type, change, balance: updated.stock, note: d.note, createdAt: when, supplierId: d.type === 'IN' ? d.supplierId : null } });
     });
     revalidatePath('/inventory');
   });
@@ -75,5 +77,5 @@ export async function moveStock(input: z.input<typeof moveSchema>) {
 
 export async function stockHistory(productId: string) {
   await requirePage('inventory');
-  return db.stockMovement.findMany({ where: { productId }, orderBy: { createdAt: 'desc' }, take: 50 });
+  return db.stockMovement.findMany({ where: { productId }, orderBy: { createdAt: 'desc' }, take: 50, include: { supplier: { select: { name: true } } } });
 }
