@@ -11,7 +11,7 @@ const schema = z.object({
   name: v.personName,
   phone: v.phone,
   email: v.email,
-  gender: v.optional(20),
+  gender: z.string().nullish().refine((g): g is string => !!g && ['Female', 'Male', 'Other'].includes(g), 'choose a gender'),
   birthday: v.optional(10),
   address: v.optional(300),
   notes: v.optional(1000),

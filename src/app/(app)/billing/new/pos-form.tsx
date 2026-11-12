@@ -30,7 +30,7 @@ export function PosForm({ gstRate, customers: initialCustomers, services, produc
   const { run, pending } = useAction();
   const [customers, setCustomers] = useState(initialCustomers);
   const [customerId, setCustomerId] = useState(initial.customerId);
-  const [newClient, setNewClient] = useState<{ name: string; phone: string } | null>(null);
+  const [newClient, setNewClient] = useState<{ name: string; phone: string; gender: string } | null>(null);
   const [withGst, setWithGst] = useState(true);
   const [branchId, setBranchId] = useState(initial.branchId);
   const [lines, setLines] = useState<PosLine[]>(initial.lines);
@@ -99,12 +99,13 @@ export function PosForm({ gstRate, customers: initialCustomers, services, produc
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Input placeholder="Full name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} aria-label="New client name" autoFocus />
                     <Input {...phoneProps} placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} aria-label="New client mobile" />
+                    <Select value={newClient.gender} onChange={(e) => setNewClient({ ...newClient, gender: e.target.value })} aria-label="New client gender"><option value="" disabled>Gender</option><option>Female</option><option>Male</option><option>Other</option></Select>
                   </div>
                   <button type="button" onClick={() => setNewClient(null)} className="mt-3 text-[13px] font-medium text-violet-700 hover:underline">Choose an existing client instead</button>
                 </div>
               ) : (
                 <ClientCombobox id="bill-client" clients={customers} value={customerId} onChange={setCustomerId} disabled={!!initial.appointmentId}
-                  onNew={initial.appointmentId ? undefined : (text) => { const d = /\d{4,}/.test(text); setNewClient({ name: d ? '' : text, phone: d ? text : '' }); }} />
+                  onNew={initial.appointmentId ? undefined : (text) => { const d = /\d{4,}/.test(text); setNewClient({ name: d ? '' : text, phone: d ? text : '', gender: '' }); }} />
               )}
             </div>
             {branches.length > 0 && (

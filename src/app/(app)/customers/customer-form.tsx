@@ -24,30 +24,20 @@ export function CustomerForm({ initial, staff, onDone }:
     >
       <Field label="Full name"><Input id="c-name" value={f.name} onChange={set('name')} required /></Field>
       <Field label="Mobile number"><Input {...phoneProps} id="c-phone" value={f.phone} onChange={set('phone')} required placeholder="+91 98765 43210" /></Field>
-      <Field label="Email"><Input id="c-email" type="email" value={f.email ?? ''} onChange={set('email')} /></Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Gender">
-          <Select id="c-gender" value={f.gender ?? ''} onChange={set('gender')}>
-            <option value="">Not set</option><option>Female</option><option>Male</option><option>Other</option>
-          </Select>
-        </Field>
-        <Field label="Birthday"><Input id="c-bday" type="date" value={f.birthday ?? ''} onChange={set('birthday')} /></Field>
-      </div>
-      <Field label="Preferred stylist">
+      <Field label="Email (optional)"><Input id="c-email" type="email" value={f.email ?? ''} onChange={set('email')} /></Field>
+      <Field label="Gender">
+        <Select id="c-gender" value={f.gender ?? ''} onChange={set('gender')}>
+          <option value="" disabled>Select gender</option><option>Female</option><option>Male</option><option>Other</option>
+        </Select>
+      </Field>
+      <Field label="Preferred stylist (optional)">
         <Select id="c-pref" value={f.preferredStaffId ?? ''} onChange={set('preferredStaffId')}>
           <option value="">No preference</option>
           {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
       </Field>
-      <Field label="Address"><Input id="c-address" value={f.address ?? ''} onChange={set('address')} /></Field>
-      <Field label="Hair notes" className="sm:col-span-2">
-        <Textarea id="c-hair" value={f.hairNotes ?? ''} onChange={set('hairNotes')} placeholder="Cut style, colour formula, scalp sensitivity, treatment frequency" />
-      </Field>
-      <Field label="Nail notes" className="sm:col-span-2">
-        <Textarea id="c-nail" value={f.nailNotes ?? ''} onChange={set('nailNotes')} placeholder="Shape, length, favourite shades, extension type" />
-      </Field>
-      <Field label="Other notes" className="sm:col-span-2">
-        <Textarea id="c-notes" value={f.notes ?? ''} onChange={set('notes')} placeholder="Allergies, preferences, VIP details" />
+      <Field label="Notes (optional)" className="sm:col-span-2">
+        <Textarea id="c-notes" value={f.notes ?? ''} onChange={set('notes')} placeholder="Hair or nail details, allergies, preferences, VIP details" />
       </Field>
       <div className="flex justify-end gap-2 sm:col-span-2">
         <Button variant="secondary" onClick={() => onDone()}>Cancel</Button>

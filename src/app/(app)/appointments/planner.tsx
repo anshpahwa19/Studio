@@ -320,7 +320,7 @@ function AppointmentDetail({ appt, onClose, staff, editable, canBill }: Props & 
 
 function BookingForm({ initial, services, customers, staff, branches, onDone }: Props & { initial: Draft; onDone: (date?: string) => void }) {
   const [d, setD] = useState(initial);
-  const [newClient, setNewClient] = useState<{ name: string; phone: string } | null>(null);
+  const [newClient, setNewClient] = useState<{ name: string; phone: string; gender: string } | null>(null);
   const [svcQ, setSvcQ] = useState('');
   const { run, pending } = useAction();
 
@@ -353,13 +353,14 @@ function BookingForm({ initial, services, customers, staff, branches, onDone }: 
               <div className="grid grid-cols-2 gap-2">
                 <Input placeholder="Full name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} required aria-label="New client name" autoFocus />
                 <Input {...phoneProps} placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} required aria-label="New client mobile" />
+                <Select value={newClient.gender} onChange={(e) => setNewClient({ ...newClient, gender: e.target.value })} aria-label="New client gender"><option value="" disabled>Gender</option><option>Female</option><option>Male</option><option>Other</option></Select>
               </div>
               <button type="button" onClick={() => setNewClient(null)} className="mt-3 text-[13px] font-medium text-violet-700 hover:underline">Choose an existing client instead</button>
             </div>
           ) : (
             <ClientCombobox id="book-client" clients={customers} value={d.customerId}
               onChange={(id) => { const c = customers.find((x) => x.id === id); setD({ ...d, customerId: id, staffId: c?.preferredStaffId && staff.some((s) => s.id === c.preferredStaffId) ? c.preferredStaffId : d.staffId }); }}
-              onNew={(text) => { const digits = /\d{4,}/.test(text); setNewClient({ name: digits ? '' : text, phone: digits ? text : '' }); }} />
+              onNew={(text) => { const digits = /\d{4,}/.test(text); setNewClient({ name: digits ? '' : text, phone: digits ? text : '', gender: '' }); }} />
           )}
         </div>
         <div className="grid grid-cols-2 gap-3">
