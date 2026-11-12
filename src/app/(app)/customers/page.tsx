@@ -18,7 +18,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
     where: {
       active: true,
       ...(q && { OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] }),
-      ...(branch && { AND: [{ OR: [{ appointments: { some: { branchId: branch, ...visitedAppt } } }, { invoices: { some: { branchId: branch, status: { not: 'Cancelled' } } } }] }] }),
+      ...(branch && { AND: [{ OR: [{ branchId: branch }, { appointments: { some: { branchId: branch, ...visitedAppt } } }, { invoices: { some: { branchId: branch, status: { not: 'Cancelled' } } } }] }] }),
     },
     orderBy: { name: 'asc' },
     take: 300,
@@ -34,6 +34,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
   ]);
   const branchName = new Map(branches.map((b) => [b.id, b.name]));
   const visited = new Map<string, Set<string>>();
+  for (const c of customers) { const n = c.branchId && branchName.get(c.branchId); if (n) visited.set(c.id, new Set([n])); }
   for (const r of [...apptBranches, ...billBranches]) {
     const name = branchName.get(r.branchId!);
     if (name) visited.set(r.customerId, (visited.get(r.customerId) ?? new Set()).add(name));
@@ -43,7 +44,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
 
   return (
     <>
-      <PageHeader title="Customers (CRM)" subtitle={`${plural(customers.length, q ? 'matching client' : 'active client')} · profiles, visit history and styling notes`} actions={canEdit(user.role, 'customers') && <NewCustomerButton staff={staff} autoOpen={searchParams.new === '1'} />} />
+      <PageHeader title="Customers (CRM)" subtitle={`${plural(customers.length, q ? 'matching client' : 'active client')} · profiles, visit history and styling notes`} actions={canEdit(user.role, 'customers') && <NewCustomerButton staff={staff} branches={branches} autoOpen={searchParams.new === '1'} />} />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <form className="w-full max-w-md">
           {branch && <input type="hidden" name="branch" value={branch} />}

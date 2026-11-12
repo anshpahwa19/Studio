@@ -21,7 +21,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
   const [byApptBranch, byBillBranch, allBranches] = await Promise.all([
     db.appointment.groupBy({ by: ['branchId'], where: { customerId: c.id, status: 'Completed', branchId: { not: null } }, _count: true, _max: { date: true } }),
     db.invoice.groupBy({ by: ['branchId'], where: { customerId: c.id, status: { not: 'Cancelled' }, branchId: { not: null } }, _sum: { total: true } }),
-    db.branch.findMany({ select: { id: true, name: true } }),
+    db.branch.findMany({ select: { id: true, name: true, active: true } }),
   ]);
   const branchVisits = allBranches
     .map((b) => ({ name: b.name, visits: byApptBranch.find((x) => x.branchId === b.id)?._count ?? 0, last: byApptBranch.find((x) => x.branchId === b.id)?._max.date ?? null, billed: byBillBranch.find((x) => x.branchId === b.id)?._sum.total ?? 0 }))
@@ -47,8 +47,9 @@ export default async function CustomerPage({ params }: { params: { id: string } 
             {editable && (
               <EditCustomerButtons
                 staff={staff}
+                branches={allBranches.filter((b) => b.active)}
                 canArchive={isSenior(user.role) && c.active}
-                customer={{ id: c.id, name: c.name, phone: c.phone, email: c.email, gender: c.gender, birthday: c.birthday, address: c.address, notes: c.notes, hairNotes: c.hairNotes, nailNotes: c.nailNotes, preferredStaffId: c.preferredStaffId }}
+                customer={{ id: c.id, name: c.name, phone: c.phone, email: c.email, gender: c.gender, birthday: c.birthday, address: c.address, notes: c.notes, hairNotes: c.hairNotes, nailNotes: c.nailNotes, preferredStaffId: c.preferredStaffId, branchId: c.branchId }}
               />
             )}
           </>
@@ -78,7 +79,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
           <dl className="space-y-4">
             {[
               ['Hair', c.hairNotes], ['Nails', c.nailNotes], ['Notes', c.notes],
-              ['Preferred stylist', c.preferredStaff?.name], ['Birthday', c.birthday && fmtDate(c.birthday, { day: 'numeric', month: 'long' })],
+              ['Branch', allBranches.find((b) => b.id === c.branchId)?.name], ['Preferred stylist', c.preferredStaff?.name], ['Birthday', c.birthday && fmtDate(c.birthday, { day: 'numeric', month: 'long' })],
               ['Address', c.address], ['Gender', c.gender],
             ].map(([k, val]) => (
               <div key={k as string}>

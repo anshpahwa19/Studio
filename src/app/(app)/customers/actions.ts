@@ -18,6 +18,7 @@ const schema = z.object({
   hairNotes: v.optional(1000),
   nailNotes: v.optional(1000),
   preferredStaffId: v.optional(40),
+  branchId: v.optional(40),
 });
 export type CustomerInput = z.input<typeof schema>;
 

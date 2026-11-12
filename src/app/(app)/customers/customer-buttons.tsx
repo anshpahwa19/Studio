@@ -5,23 +5,23 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
-import { CustomerForm, type StaffOption } from './customer-form';
+import { CustomerForm, type BranchOption, type StaffOption } from './customer-form';
 import { archiveCustomer, type CustomerInput } from './actions';
 
-export function NewCustomerButton({ staff, autoOpen = false }: { staff: StaffOption[]; autoOpen?: boolean }) {
+export function NewCustomerButton({ staff, branches, autoOpen = false }: { staff: StaffOption[]; branches: BranchOption[]; autoOpen?: boolean }) {
   const [open, setOpen] = useState(autoOpen);
   const router = useRouter();
   return (
     <>
       <Button onClick={() => setOpen(true)}><Plus size={16} />Add new client</Button>
       <Modal open={open} onClose={() => setOpen(false)} title="New client" wide>
-        <CustomerForm staff={staff} onDone={(c) => { setOpen(false); if (c) router.push(`/customers/${c.id}`); }} />
+        <CustomerForm staff={staff} branches={branches} onDone={(c) => { setOpen(false); if (c) router.push(`/customers/${c.id}`); }} />
       </Modal>
     </>
   );
 }
 
-export function EditCustomerButtons({ customer, staff, canArchive }: { customer: CustomerInput & { id: string }; staff: StaffOption[]; canArchive: boolean }) {
+export function EditCustomerButtons({ customer, staff, branches, canArchive }: { customer: CustomerInput & { id: string }; staff: StaffOption[]; branches: BranchOption[]; canArchive: boolean }) {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const { run, pending } = useAction();
@@ -31,7 +31,7 @@ export function EditCustomerButtons({ customer, staff, canArchive }: { customer:
       <Button variant="secondary" onClick={() => setOpen(true)}>Edit profile</Button>
       {canArchive && <Button variant="danger" onClick={() => setConfirm(true)}>Archive</Button>}
       <Modal open={open} onClose={() => setOpen(false)} title="Edit client" wide>
-        <CustomerForm initial={customer} staff={staff} onDone={() => setOpen(false)} />
+        <CustomerForm initial={customer} staff={staff} branches={branches} onDone={() => setOpen(false)} />
       </Modal>
       <Modal open={confirm} onClose={() => setConfirm(false)} title="Archive this client?">
         <p className="text-ink-soft">{customer.name} will be hidden from client lists and booking. Their bills and history stay in reports.</p>

@@ -44,6 +44,7 @@ model Branch {
   invoices     Invoice[]
   expenses     Expense[]
   stockMovements StockMovement[]
+  customers    Customer[]
 }
 
 model Customer {
@@ -58,9 +59,11 @@ model Customer {
   hairNotes        String?
   nailNotes        String?
   preferredStaffId String?
+  branchId         String?
   active           Boolean       @default(true)
   createdAt        DateTime      @default(now())
   preferredStaff   Staff?        @relation(fields: [preferredStaffId], references: [id])
+  branch           Branch?       @relation(fields: [branchId], references: [id])
   appointments     Appointment[]
   invoices         Invoice[]
 

@@ -1,14 +1,16 @@
 'use client';
 import { useState } from 'react';
 import { Button, Field, Input, Select, Textarea } from '@/components/ui';
+import { toast } from '@/components/toast';
 import { useAction } from '@/components/use-action';
 import { saveCustomer, type CustomerInput } from './actions';
 import { phoneProps } from '@/lib/validate';
 
 export type StaffOption = { id: string; name: string };
+export type BranchOption = { id: string; name: string };
 
-export function CustomerForm({ initial, staff, onDone }:
-  { initial?: CustomerInput; staff: StaffOption[]; onDone: (c?: { id: string; name: string; phone: string }) => void }) {
+export function CustomerForm({ initial, staff, branches = [], onDone }:
+  { initial?: CustomerInput; staff: StaffOption[]; branches?: BranchOption[]; onDone: (c?: { id: string; name: string; phone: string }) => void }) {
   const [f, setF] = useState<CustomerInput>(initial ?? { name: '', phone: '' });
   const { run, pending } = useAction();
   const set = (k: keyof CustomerInput) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
@@ -18,6 +20,7 @@ export function CustomerForm({ initial, staff, onDone }:
       className="grid gap-4 sm:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (branches.length > 0 && !f.branchId) { toast.error('Choose the branch.'); return; }
         const r = await run(() => saveCustomer(f), f.id ? 'Client updated' : 'Client added');
         if (r !== false) onDone(r);
       }}
@@ -30,6 +33,14 @@ export function CustomerForm({ initial, staff, onDone }:
           <option value="" disabled>Select gender</option><option>Female</option><option>Male</option><option>Other</option>
         </Select>
       </Field>
+      {branches.length > 0 && (
+        <Field label="Branch">
+          <Select id="c-branch" value={f.branchId ?? ''} onChange={set('branchId')}>
+            <option value="" disabled>Select branch</option>
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </Select>
+        </Field>
+      )}
       <Field label="Preferred stylist (optional)">
         <Select id="c-pref" value={f.preferredStaffId ?? ''} onChange={set('preferredStaffId')}>
           <option value="">No preference</option>
