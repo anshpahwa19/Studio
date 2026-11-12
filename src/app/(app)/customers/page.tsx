@@ -5,6 +5,7 @@ import { canEdit } from '@/lib/roles';
 import { fmtDate, money0, plural } from '@/lib/format';
 import { Badge, Card, Empty, Input, PageHeader } from '@/components/ui';
 import { NewCustomerButton } from './customer-buttons';
+import { BulkButtons } from './bulk-buttons';
 import { BranchFilter } from './branch-filter';
 
 export default async function CustomersPage({ searchParams }: { searchParams: { q?: string; new?: string; branch?: string } }) {
@@ -51,6 +52,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
           <Input id="q" name="q" defaultValue={q} placeholder="Search by name, mobile or email" aria-label="Search clients" />
         </form>
         {branches.length > 0 && <BranchFilter branches={branches} value={branch} q={q} />}
+        <div className="ml-auto flex gap-2"><BulkButtons canEdit={canEdit(user.role, 'customers')} downloadHref={`/customers/export?${new URLSearchParams({ ...(q && { q }), ...(branch && { branch }) })}`} /></div>
       </div>
       <Card pad={false}>
         {customers.length === 0 ? (
