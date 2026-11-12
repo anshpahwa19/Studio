@@ -14,7 +14,7 @@ type Expense = { id: string; date: string; category: string; description: string
 export function ExpenseList({ month, branch, allBranches, expenses, categories, branches, autoOpen = false }: { month: string; branch: string; allBranches: { id: string; name: string }[]; expenses: Expense[]; categories: string[]; branches: { id: string; name: string }[]; autoOpen?: boolean }) {
   const router = useRouter();
   const today = isoDate();
-  const blank = (): ExpenseInput => ({ date: today.startsWith(month) ? today : `${month}-01`, category: categories[0], description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch && branch !== 'none' ? branch : branches[0]?.id ?? null });
+  const blank = (): ExpenseInput => ({ date: today.startsWith(month) ? today : `${month}-01`, category: 'General', description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch && branch !== 'none' ? branch : branches[0]?.id ?? null });
   const [f, setF] = useState<ExpenseInput | null>(autoOpen ? blank() : null);
   const { run, pending } = useAction();
 
@@ -60,12 +60,7 @@ export function ExpenseList({ month, branch, allBranches, expenses, categories, 
             <Field label="What was it for" className="col-span-2"><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} required placeholder="Electricity bill for October" autoFocus /></Field>
             <Field label="Amount (₹)"><Input type="number" min="1" step="0.01" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value as unknown as number })} required /></Field>
             <Field label="Date"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} required /></Field>
-            <Field label="Category" hint="Pick one or type a new category">
-              <Input list="expense-categories" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} required />
-              <datalist id="expense-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
-            </Field>
             <Field label="Paid via"><Select value={f.method} onChange={(e) => setF({ ...f, method: e.target.value as ExpenseInput['method'] })}>{PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}</Select></Field>
-            <Field label="Paid to"><Input value={f.vendor ?? ''} onChange={(e) => setF({ ...f, vendor: e.target.value })} /></Field>
             {branches.length > 0 && (
               <Field label="Branch"><Select value={f.branchId ?? ''} onChange={(e) => setF({ ...f, branchId: e.target.value || null })}><option value="">Whole business</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select></Field>
             )}
