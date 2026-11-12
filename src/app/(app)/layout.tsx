@@ -40,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
   const items = NAV.filter((n) => canView(user.role, n.area)).map(({ href, label }) => ({ href, label }));
   return (
-    <Shell items={items} salon={settings?.name ?? 'Salon'} user={{ name: user.name, role: user.role }} alerts={alerts} canBill={billing}>
+    <Shell items={items} salon={settings?.name ?? 'Salon'} user={{ name: user.name, role: user.role }} alerts={alerts} canBill={billing} canStock={stock}>
       {children}
     </Shell>
   );

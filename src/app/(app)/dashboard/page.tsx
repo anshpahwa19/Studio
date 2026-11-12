@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, CalendarCheck, CalendarDays, CalendarPlus, CheckCircle2, Clock, IndianRupee, Package, Receipt, UserPlus, Users, Wallet } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CalendarCheck, CalendarDays, CalendarPlus, CheckCircle2, Clock, IndianRupee, Package, PackagePlus, Receipt, UserPlus, Users, Wallet } from 'lucide-react';
 import { db } from '@/lib/db';
 import { requirePage } from '@/lib/session';
 import { canView } from '@/lib/roles';
@@ -55,6 +55,7 @@ export default async function Dashboard() {
     { href: '/appointments?book=1', title: 'Book Appointment', text: 'Schedule a client visit with a stylist', tag: 'Calendar', tone: 'violet', icon: CalendarPlus, show: true },
     { href: '/billing/new', title: 'Create POS Bill', text: 'Fast checkout, GST bill & receipt', tag: 'Point of sale', tone: 'green', icon: Receipt, show: money },
     { href: '/customers?new=1', title: 'Add New Client', text: 'Client profile & styling notes', tag: 'CRM', tone: 'blue', icon: UserPlus, show: canView(user.role, 'customers') },
+    { href: '/inventory?stock=1', title: 'Add Stock', text: 'Record new stock received & date', tag: 'Inventory', tone: 'teal', icon: PackagePlus, show: stock },
     { href: '/expenses?new=1', title: 'Record Expense', text: 'Supplies, rent & daily payouts', tag: 'Finance', tone: 'red', icon: Wallet, show: spend },
   ];
 
@@ -77,7 +78,7 @@ export default async function Dashboard() {
         <SyncButton />
       </div>
 
-      <div className="mb-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
         {actions.filter((a) => a.show).map((a) => (
           <Link key={a.href} href={a.href} className="card group flex flex-col p-6 transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md">
             <div className="flex items-start justify-between gap-3">

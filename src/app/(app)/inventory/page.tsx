@@ -6,7 +6,7 @@ import { InventoryTable } from './inventory-table';
 import { StockTabs } from './stock-tabs';
 import { MonthlyPage } from './monthly';
 
-export default async function InventoryPage({ searchParams }: { searchParams: { view?: string; month?: string } }) {
+export default async function InventoryPage({ searchParams }: { searchParams: { view?: string; month?: string; stock?: string } }) {
   await requirePage('inventory');
   if (searchParams.view === 'month') return <MonthlyPage month={/^\d{4}-(0[1-9]|1[0-2])$/.test(searchParams.month ?? '') ? searchParams.month! : isoDate().slice(0, 7)} />;
   const products = await db.product.findMany({ where: { active: true }, orderBy: { name: 'asc' } });
@@ -21,7 +21,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
         <Stat label="Need reordering" value={low} tone={low ? 'warn' : 'good'} note="At or below reorder level" />
         <Stat label="Stock value at cost" value={money0(value)} />
       </div>
-      <InventoryTable products={products} />
+      <InventoryTable products={products} autoStock={searchParams.stock === '1'} />
     </>
   );
 }

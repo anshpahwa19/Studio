@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  BarChart3, Bell, CalendarCheck, CalendarDays, CalendarPlus, ChevronDown, ChevronLeft, LayoutDashboard, LogOut, Menu, Package, Plus,
+  BarChart3, Bell, CalendarCheck, CalendarDays, CalendarPlus, ChevronDown, ChevronLeft, LayoutDashboard, LogOut, Menu, Package, PackagePlus, Plus,
   Receipt, Scissors, Search, Settings, UserCheck, UserPlus, Users, Wallet, X,
 } from 'lucide-react';
 import { SignOutDialog } from './sign-out';
@@ -35,8 +35,8 @@ const TITLES: [string, string, string][] = [
 
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
-export function Shell({ items, salon, user, alerts, canBill, children }: {
-  items: NavItem[]; salon: string; user: { name: string; role: string }; alerts: Alert[]; canBill: boolean; children: ReactNode;
+export function Shell({ items, salon, user, alerts, canBill, canStock, children }: {
+  items: NavItem[]; salon: string; user: { name: string; role: string }; alerts: Alert[]; canBill: boolean; canStock: boolean; children: ReactNode;
 }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -119,7 +119,7 @@ export function Shell({ items, salon, user, alerts, canBill, children }: {
       </aside>
 
       <div className="min-w-0 flex-1">
-        <TopBar title={title[1]} subtitle={title[2]} onMenu={() => setOpen(true)} alerts={alerts} user={user} canBill={canBill} onSignOut={() => setSigningOut(true)} />
+        <TopBar title={title[1]} subtitle={title[2]} onMenu={() => setOpen(true)} alerts={alerts} user={user} canBill={canBill} canStock={canStock} onSignOut={() => setSigningOut(true)} />
         <main className="px-4 py-6 sm:px-8 lg:py-8">
           <div className="mx-auto max-w-[1280px]">{children}</div>
         </main>
@@ -141,8 +141,8 @@ function useOutside(close: () => void) {
   return ref;
 }
 
-function TopBar({ title, subtitle, onMenu, alerts, user, canBill, onSignOut }: {
-  title: string; subtitle: string; onMenu: () => void; alerts: Alert[]; user: { name: string; role: string }; canBill: boolean; onSignOut: () => void;
+function TopBar({ title, subtitle, onMenu, alerts, user, canBill, canStock, onSignOut }: {
+  title: string; subtitle: string; onMenu: () => void; alerts: Alert[]; user: { name: string; role: string }; canBill: boolean; canStock: boolean; onSignOut: () => void;
 }) {
   const router = useRouter();
   const [q, setQ] = useState('');
@@ -153,6 +153,7 @@ function TopBar({ title, subtitle, onMenu, alerts, user, canBill, onSignOut }: {
     { href: '/appointments?book=1', label: 'Book appointment', icon: CalendarPlus },
     ...(canBill ? [{ href: '/billing/new', label: 'Create bill', icon: Receipt }] : []),
     { href: '/customers?new=1', label: 'Add new client', icon: UserPlus },
+    ...(canStock ? [{ href: '/inventory?stock=1', label: 'Add stock', icon: PackagePlus }] : []),
     { href: '/expenses?new=1', label: 'Record expense', icon: Wallet },
   ];
 

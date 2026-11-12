@@ -12,11 +12,13 @@ type Move = Awaited<ReturnType<typeof stockHistory>>[number];
 
 const MOVE_LABEL: Record<string, string> = { IN: 'Received', OUT: 'Used / removed', ADJUST: 'Count correction', SALE: 'Sold', RETURN: 'Returned' };
 
-export function InventoryTable({ products }: { products: Product[] }) {
+export function InventoryTable({ products, autoStock = false }: { products: Product[]; autoStock?: boolean }) {
   const [q, setQ] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
   const [edit, setEdit] = useState<ProductInput | null>(null);
-  const [move, setMove] = useState<{ p: Product; type: 'IN' | 'OUT' | 'ADJUST'; qty: string; note: string; date: string } | null>(null);
+  const [move, setMove] = useState<{ p: Product; type: 'IN' | 'OUT' | 'ADJUST'; qty: string; note: string; date: string; pick?: boolean } | null>(
+    autoStock && products.length ? { p: products[0], type: 'IN', qty: '', note: '', date: isoDate(), pick: true } : null,
+  );
   const [history, setHistory] = useState<{ p: Product; rows: Move[] | null } | null>(null);
   const { run, pending } = useAction();
 
@@ -96,6 +98,13 @@ export function InventoryTable({ products }: { products: Product[] }) {
             e.preventDefault();
             if ((await run(() => moveStock({ productId: move.p.id, type: move.type, qty: Number(move.qty), note: move.note, date: move.date }), 'Stock updated')) !== false) setMove(null);
           }}>
+            {move.pick && (
+              <Field label="Product">
+                <Select value={move.p.id} onChange={(e) => setMove({ ...move, p: products.find((x) => x.id === e.target.value) ?? move.p })}>
+                  {products.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </Select>
+              </Field>
+            )}
             <p className="text-ink-soft">Currently {move.p.stock} {move.p.unit} in stock.</p>
             <div className="grid grid-cols-3 gap-1 rounded-lg border border-line p-1">
               {(['IN', 'OUT', 'ADJUST'] as const).map((t) => (
