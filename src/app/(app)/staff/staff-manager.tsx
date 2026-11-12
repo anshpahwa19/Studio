@@ -4,12 +4,12 @@ import { Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
-import { DAY_NAMES, fmtTime, plural } from '@/lib/format';
+import { DAY_NAMES, fmtTime, money0, plural } from '@/lib/format';
 import { archiveStaff, restoreStaff, saveStaff, type StaffInput } from './actions';
 
-type Member = { id: string; name: string; phone: string; email: string | null; title: string; skills: string; commissionRate: number; workDays: string; startTime: string; endTime: string; upcoming: number; active: boolean };
+type Member = { id: string; name: string; phone: string; email: string | null; title: string; skills: string; payType: string; commissionRate: number; monthlySalary: number; workDays: string; startTime: string; endTime: string; upcoming: number; active: boolean };
 
-const blank: StaffInput = { name: '', phone: '', email: '', title: 'Stylist', skills: '', commissionRate: 25, workDays: [1, 2, 3, 4, 5, 6], startTime: '09:00', endTime: '20:00' };
+const blank: StaffInput = { name: '', phone: '', email: '', title: 'Stylist', skills: '', payType: 'Commission', commissionRate: 25, monthlySalary: 0, workDays: [1, 2, 3, 4, 5, 6], startTime: '09:00', endTime: '20:00' };
 
 export function StaffManager({ staff }: { staff: Member[] }) {
   const [f, setF] = useState<StaffInput | null>(null);
@@ -39,7 +39,7 @@ export function StaffManager({ staff }: { staff: Member[] }) {
                     <div className="flex items-center gap-2 text-[16px] font-semibold">{s.name}{!s.active && <Badge>Archived</Badge>}</div>
                     <div className="text-ink-mute">{s.title} · {s.phone}</div>
                   </div>
-                  <Badge tone="plum">{s.commissionRate}% commission</Badge>
+                  <Badge tone={s.payType === 'Salary' ? 'blue' : 'plum'}>{s.payType === 'Salary' ? `${money0(s.monthlySalary)} / month` : `${s.commissionRate}% commission`}</Badge>
                 </div>
                 {s.skills && <div className="mt-3 flex flex-wrap gap-1.5">{s.skills.split(',').map((k) => k.trim()).filter(Boolean).map((k) => <Badge key={k}>{k}</Badge>)}</div>}
                 <div className="mt-4 flex flex-wrap items-center gap-1">
@@ -51,7 +51,7 @@ export function StaffManager({ staff }: { staff: Member[] }) {
                 <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
                   <span className="text-[12.5px] text-ink-mute">{plural(s.upcoming, 'upcoming booking')}</span>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setF({ ...s, workDays: days })}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setF({ ...s, payType: s.payType as StaffInput['payType'], workDays: days })}>Edit</Button>
                     {s.active
                       ? <Button size="sm" variant="ghost" onClick={() => setArchiving(s)}>Archive</Button>
                       : <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => restoreStaff(s.id), 'Team member restored')}>Unarchive</Button>}
@@ -70,7 +70,18 @@ export function StaffManager({ staff }: { staff: Member[] }) {
             <Field label="Mobile number"><Input id="st-phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} required /></Field>
             <Field label="Email"><Input id="st-email" type="email" value={f.email ?? ''} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
             <Field label="Job title"><Input id="st-title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required placeholder="Senior Stylist" /></Field>
-            <Field label="Commission (%)"><Input id="st-comm" type="number" min="0" max="100" step="0.5" value={f.commissionRate} onChange={(e) => setF({ ...f, commissionRate: e.target.value as unknown as number })} /></Field>
+            <fieldset className="col-span-2">
+              <legend className="label">How are they paid?</legend>
+              <div className="inline-flex rounded-xl border border-line bg-white p-1">
+                {([['Commission', 'On commission'], ['Salary', 'Fixed salary']] as const).map(([k, label]) => (
+                  <button key={k} type="button" aria-pressed={f.payType === k} onClick={() => setF({ ...f, payType: k })}
+                    className={`rounded-lg px-4 py-1.5 text-[14px] font-semibold ${f.payType === k ? 'bg-violet-600 text-white' : 'text-ink-soft hover:bg-stone-100'}`}>{label}</button>
+                ))}
+              </div>
+            </fieldset>
+            {f.payType === 'Commission'
+              ? <Field label="Commission (%)" hint="Share of the revenue from services they perform" className="col-span-2"><Input id="st-comm" type="number" min="0" max="100" step="0.5" value={f.commissionRate} onChange={(e) => setF({ ...f, commissionRate: e.target.value as unknown as number })} /></Field>
+              : <Field label="Monthly salary (₹)" className="col-span-2"><Input id="st-salary" type="number" min="1" step="100" value={f.monthlySalary || ''} onChange={(e) => setF({ ...f, monthlySalary: e.target.value as unknown as number })} required /></Field>}
             <Field label="Skills" hint="Separate with commas" className="col-span-2"><Input id="st-skills" value={f.skills} onChange={(e) => setF({ ...f, skills: e.target.value })} placeholder="Balayage, Keratin, Nail art" /></Field>
             <fieldset className="col-span-2">
               <legend className="label">Working days</legend>

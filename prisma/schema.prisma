@@ -73,7 +73,9 @@ model Staff {
   email          String?
   title          String               @default("Stylist")
   skills         String               @default("") // comma separated
-  commissionRate Float                @default(0)
+  payType        String               @default("Commission") // Commission | Salary
+  commissionRate Float                @default(0) // % of service revenue, when payType is Commission
+  monthlySalary  Float                @default(0) // rupees per month, when payType is Salary
   workDays       String               @default("1,2,3,4,5,6") // 0 = Sunday
   startTime      String               @default("09:00")
   endTime        String               @default("20:00")

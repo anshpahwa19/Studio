@@ -15,7 +15,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
     db.invoice.findMany({ where: { createdAt: when, status: { not: 'Void' } }, include: { items: true } }),
     db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Void' } } } }),
     db.expense.findMany({ where: { date: { gte: from, lte: to } } }),
-    db.staff.findMany({ select: { id: true, name: true, commissionRate: true, active: true } }),
+    db.staff.findMany({ select: { id: true, name: true, payType: true, commissionRate: true, active: true } }),
   ]);
 
   const sales = sum(invoices.map((i) => i.total));
@@ -45,7 +45,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
   const expenseCats = group(expenses, (e) => e.category, (e) => ({ qty: 1, value: e.amount }));
   const staffMap = new Map(staff.map((s) => [s.id, s]));
   const perf = group(items.filter((i) => i.kind === 'service' && i.staffId), (i) => i.staffId!, (i) => ({ qty: i.qty, value: i.total - i.tax }))
-    .map((r) => { const s = staffMap.get(r.key); return { ...r, name: s?.name ?? 'Former staff', rate: s?.commissionRate ?? 0 }; });
+    .map((r) => { const s = staffMap.get(r.key); return { ...r, name: s?.name ?? 'Former staff', rate: s?.commissionRate ?? 0, salaried: s?.payType === 'Salary' }; });
 
   const qs = key === 'custom' ? `from=${from}&to=${to}` : `period=${key}`;
 
@@ -90,7 +90,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
             <div className="overflow-x-auto"><table className="table">
               <thead><tr><th>Stylist</th><th className="text-right">Services</th><th className="text-right">Revenue</th><th className="text-right">Commission</th></tr></thead>
               <tbody>{perf.map((r) => (
-                <tr key={r.key}><td className="font-medium">{r.name}</td><td className="tabular text-right">{r.qty}</td><td className="tabular text-right">{money0(r.value)}</td><td className="tabular text-right">{money0((r.value * r.rate) / 100)}<div className="text-[11.5px] text-ink-mute">{r.rate}%</div></td></tr>
+                <tr key={r.key}><td className="font-medium">{r.name}</td><td className="tabular text-right">{r.qty}</td><td className="tabular text-right">{money0(r.value)}</td><td className="tabular text-right">{r.salaried ? <span className="text-ink-mute">Salaried</span> : <>{money0((r.value * r.rate) / 100)}<div className="text-[11.5px] text-ink-mute">{r.rate}%</div></>}</td></tr>
               ))}</tbody>
             </table></div>
           )}

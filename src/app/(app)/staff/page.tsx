@@ -13,7 +13,7 @@ export default async function StaffPage() {
   const counts = new Map(upcoming.map((u) => [u.staffId, u._count]));
   return (
     <>
-      <PageHeader title="Staff Management" subtitle="Working days and hours decide when each person can be booked." />
+      <PageHeader title="Staff Management" subtitle="Working days and hours decide when each person can be booked. Pay is either a fixed monthly salary or a commission." />
       <StaffManager staff={staff.map((s) => ({ ...s, upcoming: counts.get(s.id) ?? 0 }))} />
     </>
   );

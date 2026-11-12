@@ -24,7 +24,7 @@ const TITLES: [string, string, string][] = [
   ['/billing', 'Point of Sale & Invoicing', 'Fast checkout, GST & payments'],
   ['/customers', 'Customer Relationship Management', 'Client profiles & styling notes'],
   ['/services', 'Services & Pricing', 'Treatment menu, prices & durations'],
-  ['/staff', 'Staff Management', 'Team, working hours & commission'],
+  ['/staff', 'Staff Management', 'Team, working hours & pay'],
   ['/attendance', 'Staff Attendance', 'Daily check-in & monthly summary'],
   ['/inventory', 'Inventory & Stock', 'Products, stock levels & reorders'],
   ['/expenses', 'Business Expenses', 'Daily costs & vendor payments'],
