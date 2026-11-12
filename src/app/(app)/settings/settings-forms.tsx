@@ -4,7 +4,7 @@ import { Badge, Button, Card, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { ROLES } from '@/lib/roles';
-import { GST_RATES } from '@/lib/validate';
+import { GST_RATES, gstinProps, phoneProps } from '@/lib/validate';
 import { deleteBranch, deleteUser, saveBranch, saveSettings, saveUser, type SettingsInput } from './actions';
 
 type Branch = { id: string; name: string; address: string; active: boolean };
@@ -32,9 +32,9 @@ export function SettingsForms({ settings, branches, users, meId }: { settings: S
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={async (e) => { e.preventDefault(); await run(() => saveSettings(s), 'Settings saved'); }}>
           <Field label="Business name" className="sm:col-span-2"><Input value={s.name} onChange={set('name')} required /></Field>
           <Field label="Address" className="sm:col-span-2" hint="Printed on bills when no branch is chosen"><Input value={s.address} onChange={set('address')} /></Field>
-          <Field label="Phone"><Input value={s.phone} onChange={set('phone')} /></Field>
+          <Field label="Phone"><Input {...phoneProps} value={s.phone} onChange={set('phone')} /></Field>
           <Field label="Email"><Input value={s.email} onChange={set('email')} /></Field>
-          <Field label="GSTIN" hint="Leave blank if not registered"><Input value={s.gstin} onChange={set('gstin')} className="uppercase" /></Field>
+          <Field label="GSTIN" hint="Leave blank if not registered"><Input {...gstinProps} value={s.gstin} onChange={set('gstin')} className="uppercase" /></Field>
           <Field label="GST rate on bills" hint="Used on every bill that charges GST. A bill can also be made without GST."><Select aria-label="GST rate on bills" value={s.gstRate} onChange={(e) => setS({ ...s, gstRate: Number(e.target.value) })}>{GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}</Select></Field>
           <Field label="Opens at"><Input type="time" value={s.openTime} onChange={set('openTime')} /></Field>
           <Field label="Closes at"><Input type="time" value={s.closeTime} onChange={set('closeTime')} /></Field>

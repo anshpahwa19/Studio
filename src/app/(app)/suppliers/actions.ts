@@ -10,10 +10,10 @@ const schema = z.object({
   id: z.string().optional(),
   name: v.required(120),
   contact: v.optional(100),
-  phone: v.optional(20),
+  phone: v.optionalPhone,
   email: v.email,
   address: v.optional(300),
-  gstin: v.optional(20),
+  gstin: v.optionalGstin,
   notes: v.optional(500),
 });
 export type SupplierInput = z.input<typeof schema>;

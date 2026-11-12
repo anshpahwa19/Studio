@@ -6,6 +6,7 @@ import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { DAY_NAMES, fmtTime, money0, plural } from '@/lib/format';
 import { archiveStaff, restoreStaff, saveStaff, type StaffInput } from './actions';
+import { phoneProps } from '@/lib/validate';
 
 type Member = { id: string; name: string; phone: string; email: string | null; title: string; skills: string; payType: string; commissionRate: number; monthlySalary: number; workDays: string; startTime: string; endTime: string; upcoming: number; active: boolean };
 
@@ -67,7 +68,7 @@ export function StaffManager({ staff }: { staff: Member[] }) {
         {f && (
           <form className="grid grid-cols-2 gap-4" onSubmit={async (e) => { e.preventDefault(); if ((await run(() => saveStaff(f), 'Team member saved')) !== false) setF(null); }}>
             <Field label="Full name" className="col-span-2"><Input id="st-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></Field>
-            <Field label="Mobile number"><Input id="st-phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} required /></Field>
+            <Field label="Mobile number"><Input {...phoneProps} id="st-phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} required /></Field>
             <Field label="Email"><Input id="st-email" type="email" value={f.email ?? ''} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
             <Field label="Job title"><Input id="st-title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required placeholder="Senior Stylist" /></Field>
             <fieldset className="col-span-2">

@@ -11,6 +11,7 @@ import { addDays, dayOfWeek, fmtDate, fmtDuration, fmtTime, fromMinutes, isoDate
 import { bookAppointment, rescheduleAppointment, setAppointmentStatus } from './actions';
 import { saveCustomer } from '../customers/actions';
 import { ClientCombobox } from '@/components/client-combobox';
+import { phoneProps } from '@/lib/validate';
 
 type Appt = {
   id: string; date: string; startTime: string; endTime: string; status: string; walkIn: boolean; notes: string | null; staffId: string;
@@ -351,7 +352,7 @@ function BookingForm({ initial, services, customers, staff, branches, onDone }: 
               <div className="mb-3 text-[13.5px] font-semibold text-violet-700">New client · saved with the booking</div>
               <div className="grid grid-cols-2 gap-2">
                 <Input placeholder="Full name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} required aria-label="New client name" autoFocus />
-                <Input placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} required aria-label="New client mobile" />
+                <Input {...phoneProps} placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} required aria-label="New client mobile" />
               </div>
               <button type="button" onClick={() => setNewClient(null)} className="mt-3 text-[13px] font-medium text-violet-700 hover:underline">Choose an existing client instead</button>
             </div>

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { gstinProps, phoneProps } from '@/lib/validate';
 import Link from 'next/link';
 import { Mail, MapPin, Phone, Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input, Textarea } from '@/components/ui';
@@ -75,9 +76,9 @@ export function SupplierManager({ suppliers, editable }: { suppliers: Row[]; edi
           <form className="grid grid-cols-2 gap-4" onSubmit={async (e) => { e.preventDefault(); if ((await run(() => saveSupplier(f), 'Supplier saved')) !== false) setF(null); }}>
             <Field label="Supplier name" className="col-span-2"><Input value={f.name} onChange={set('name')} required autoFocus /></Field>
             <Field label="Contact person"><Input value={f.contact ?? ''} onChange={set('contact')} /></Field>
-            <Field label="Phone"><Input value={f.phone ?? ''} onChange={set('phone')} /></Field>
+            <Field label="Phone"><Input {...phoneProps} value={f.phone ?? ''} onChange={set('phone')} placeholder="98765 43210" /></Field>
             <Field label="Email"><Input type="email" value={f.email ?? ''} onChange={set('email')} /></Field>
-            <Field label="GSTIN"><Input value={f.gstin ?? ''} onChange={set('gstin')} /></Field>
+            <Field label="GSTIN"><Input {...gstinProps} value={f.gstin ?? ''} onChange={set('gstin')} className="uppercase" /></Field>
             <Field label="Address" className="col-span-2"><Input value={f.address ?? ''} onChange={set('address')} /></Field>
             <Field label="Notes" className="col-span-2"><Textarea value={f.notes ?? ''} onChange={set('notes')} placeholder="Payment terms, delivery days…" /></Field>
             <div className="col-span-2 flex justify-end gap-2"><Button variant="secondary" onClick={() => setF(null)}>Cancel</Button><Button type="submit" disabled={pending}>Save supplier</Button></div>

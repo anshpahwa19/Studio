@@ -12,7 +12,7 @@ import * as v from '@/lib/validate';
 const settingsSchema = z.object({
   name: v.required(120),
   address: v.text(300),
-  phone: v.text(40),
+  phone: v.phoneOrBlank,
   email: v.text(120),
   gstin: z.string().trim().toUpperCase().regex(/^$|^[0-9]{2}[A-Z0-9]{13}$/, 'should be 15 characters, like 06ABCDE1234F1Z5'),
   openTime: v.time,

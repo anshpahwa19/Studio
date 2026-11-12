@@ -7,7 +7,7 @@ import { ClientCombobox } from '@/components/client-combobox';
 import { useAction } from '@/components/use-action';
 import { computeBill } from '@/lib/billing';
 import { fmtDuration, money, round2 } from '@/lib/format';
-import { PAYMENT_METHODS } from '@/lib/validate';
+import { PAYMENT_METHODS, phoneProps } from '@/lib/validate';
 import { createInvoice } from '../actions';
 import { saveCustomer } from '../../customers/actions';
 
@@ -98,7 +98,7 @@ export function PosForm({ gstRate, customers: initialCustomers, services, produc
                   <div className="mb-3 flex items-center gap-2 text-[13.5px] font-semibold text-violet-700"><UserPlus size={16} />New client · saved with the bill</div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Input placeholder="Full name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} aria-label="New client name" autoFocus />
-                    <Input placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} aria-label="New client mobile" />
+                    <Input {...phoneProps} placeholder="Mobile number" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} aria-label="New client mobile" />
                   </div>
                   <button type="button" onClick={() => setNewClient(null)} className="mt-3 text-[13px] font-medium text-violet-700 hover:underline">Choose an existing client instead</button>
                 </div>

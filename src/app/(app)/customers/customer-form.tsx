@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button, Field, Input, Select, Textarea } from '@/components/ui';
 import { useAction } from '@/components/use-action';
 import { saveCustomer, type CustomerInput } from './actions';
+import { phoneProps } from '@/lib/validate';
 
 export type StaffOption = { id: string; name: string };
 
@@ -22,7 +23,7 @@ export function CustomerForm({ initial, staff, onDone }:
       }}
     >
       <Field label="Full name"><Input id="c-name" value={f.name} onChange={set('name')} required /></Field>
-      <Field label="Mobile number"><Input id="c-phone" value={f.phone} onChange={set('phone')} required placeholder="+91 98765 43210" /></Field>
+      <Field label="Mobile number"><Input {...phoneProps} id="c-phone" value={f.phone} onChange={set('phone')} required placeholder="+91 98765 43210" /></Field>
       <Field label="Email"><Input id="c-email" type="email" value={f.email ?? ''} onChange={set('email')} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Gender">

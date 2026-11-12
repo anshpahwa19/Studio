@@ -8,7 +8,7 @@ import * as v from '@/lib/validate';
 
 const schema = z.object({
   id: z.string().optional(),
-  name: v.required(100),
+  name: v.personName,
   phone: v.phone,
   email: v.email,
   gender: v.optional(20),
