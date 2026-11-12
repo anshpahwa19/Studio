@@ -12,9 +12,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { m
   const from = `${month}-01`;
   const to = monthEnd(from);
   const allBranches = await db.branch.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
-  // 'none' shows only whole-business costs that belong to no branch.
-  const branch = searchParams.branch === 'none' || allBranches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
-  const inBranch = branch === 'none' ? { branchId: null } : branch ? { branchId: branch } : {};
+  const branch = allBranches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
+  const inBranch = branch ? { branchId: branch } : {};
   const [expenses, branches, used, monthAll] = await Promise.all([
     db.expense.findMany({ where: { date: { gte: from, lte: to }, ...inBranch }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], include: { branch: { select: { name: true } } } }),
     db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
@@ -31,7 +30,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { m
 
   return (
     <>
-      <PageHeader title="Business Expenses" subtitle={`${fmtDate(from, { month: 'long', year: 'numeric' })} · ${money0(total)} spent · ${branch === 'none' ? 'Whole business only' : allBranches.find((b) => b.id === branch)?.name ?? 'All branches'}`} />
+      <PageHeader title="Business Expenses" subtitle={`${fmtDate(from, { month: 'long', year: 'numeric' })} · ${money0(total)} spent · ${allBranches.find((b) => b.id === branch)?.name ?? 'All branches'}`} />
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_280px]">
         <ExpenseList autoOpen={searchParams.new === '1'} month={month} branch={branch} allBranches={allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }))} expenses={expenses} categories={categories} branches={branches} />
         <div className="space-y-6">

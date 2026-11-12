@@ -14,7 +14,7 @@ type Expense = { id: string; date: string; category: string; description: string
 export function ExpenseList({ month, branch, allBranches, expenses, categories, branches, autoOpen = false }: { month: string; branch: string; allBranches: { id: string; name: string }[]; expenses: Expense[]; categories: string[]; branches: { id: string; name: string }[]; autoOpen?: boolean }) {
   const router = useRouter();
   const today = isoDate();
-  const blank = (): ExpenseInput => ({ date: today.startsWith(month) ? today : `${month}-01`, category: 'General', description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch && branch !== 'none' ? branch : branches[0]?.id ?? null });
+  const blank = (): ExpenseInput => ({ date: today.startsWith(month) ? today : `${month}-01`, category: 'General', description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch || branches[0]?.id || null });
   const [f, setF] = useState<ExpenseInput | null>(autoOpen ? blank() : null);
   const { run, pending } = useAction();
 
@@ -26,7 +26,6 @@ export function ExpenseList({ month, branch, allBranches, expenses, categories, 
           <Select value={branch} aria-label="Branch" className="w-[210px]" onChange={(e) => router.push(`/expenses?month=${month}${e.target.value ? `&branch=${e.target.value}` : ''}`)}>
             <option value="">All branches</option>
             {allBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            <option value="none">Whole business only</option>
           </Select>
         )}
         <Button className="ml-auto" onClick={() => setF(blank())}>
