@@ -15,22 +15,24 @@ export default async function Dashboard() {
   const stock = canView(user.role, 'inventory');
   const spend = canView(user.role, 'expenses');
   const today = isoDate();
-  const paidFilter = { invoice: { status: { not: 'Void' } } };
+  const paidFilter = { invoice: { status: { not: 'Cancelled' } } };
 
-  const [settings, appts, paymentsToday, billsToday, lowStock, newClients, recent] = await Promise.all([
+  const [settings, appts, paymentsToday, refundsToday, billsToday, lowStock, newClients, recent] = await Promise.all([
     db.settings.findUniqueOrThrow({ where: { id: 1 } }),
     db.appointment.findMany({
       where: { date: today }, orderBy: { startTime: 'asc' },
       include: { customer: { select: { id: true, name: true } }, staff: { select: { name: true } }, services: { select: { name: true } } },
     }),
     money ? db.payment.findMany({ where: { ...paidFilter, createdAt: { gte: start(today) } }, select: { amount: true } }) : [],
-    db.invoice.findMany({ where: { status: { not: 'Void' }, createdAt: { gte: start(today) } }, select: { customerId: true, total: true, paid: true } }),
+    money ? db.refund.findMany({ where: { ...paidFilter, createdAt: { gte: start(today) } }, select: { amount: true } }) : [],
+    db.invoice.findMany({ where: { status: { not: 'Cancelled' }, createdAt: { gte: start(today) } }, select: { customerId: true, total: true, paid: true } }),
     stock ? db.product.findMany({ where: { active: true }, select: { stock: true, reorderLevel: true } }) : [],
     db.customer.count({ where: { active: true, createdAt: { gte: start(today) } } }),
     money ? db.payment.findMany({ where: paidFilter, orderBy: { createdAt: 'desc' }, take: 6, include: { invoice: { select: { id: true, number: true, customer: { select: { name: true } } } } } }) : [],
   ]);
 
-  const collected = paymentsToday.reduce((a, p) => a + p.amount, 0);
+  // Collected today is payments in minus refunds out.
+  const collected = paymentsToday.reduce((a, p) => a + p.amount, 0) - refundsToday.reduce((a, r) => a + r.amount, 0);
   const live = appts.filter((a) => !['Cancelled', 'NoShow'].includes(a.status));
   const count = (s: string) => appts.filter((a) => a.status === s).length;
   // Everything on the tiles is for today only: today's bookings, bills and payments.

@@ -11,13 +11,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
   const { key, from, to } = resolvePeriod(searchParams);
   const when = range(from, to);
 
-  const [invoices, payments, expenses, staff] = await Promise.all([
-    db.invoice.findMany({ where: { createdAt: when, status: { not: 'Void' } }, include: { items: true } }),
-    db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Void' } } } }),
+  const [invoices, rawPayments, refunds, expenses, staff] = await Promise.all([
+    db.invoice.findMany({ where: { createdAt: when, status: { not: 'Cancelled' } }, include: { items: true } }),
+    db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' } } } }),
+    db.refund.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' } } } }),
     db.expense.findMany({ where: { date: { gte: from, lte: to } } }),
     db.staff.findMany({ select: { id: true, name: true, payType: true, commissionRate: true, active: true } }),
   ]);
 
+  // Money collected is payments received minus refunds given back, so a refund shows as a negative on its payment method.
+  const payments = [...rawPayments, ...refunds.map((r) => ({ ...r, amount: -r.amount }))];
   const sales = sum(invoices.map((i) => i.total));
   const tax = sum(invoices.map((i) => i.tax));
   const net = sales - tax;

@@ -12,13 +12,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
   const q = searchParams.q?.trim() ?? '';
   const branches = await db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
   const branch = branches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
-  // "Visited" means a bill that is not void, or an appointment that was not cancelled or missed.
+  // "Visited" means a bill that is not cancelled, or an appointment that was not cancelled or missed.
   const visitedAppt = { status: { notIn: ['Cancelled', 'NoShow'] } };
   const customers = await db.customer.findMany({
     where: {
       active: true,
       ...(q && { OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] }),
-      ...(branch && { AND: [{ OR: [{ appointments: { some: { branchId: branch, ...visitedAppt } } }, { invoices: { some: { branchId: branch, status: { not: 'Void' } } } }] }] }),
+      ...(branch && { AND: [{ OR: [{ appointments: { some: { branchId: branch, ...visitedAppt } } }, { invoices: { some: { branchId: branch, status: { not: 'Cancelled' } } } }] }] }),
     },
     orderBy: { name: 'asc' },
     take: 300,
@@ -26,11 +26,11 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
   });
   const ids = customers.map((c) => c.id);
   const [spend, visits, staff, apptBranches, billBranches] = await Promise.all([
-    db.invoice.groupBy({ by: ['customerId'], where: { customerId: { in: ids }, status: { not: 'Void' } }, _sum: { total: true, paid: true } }),
+    db.invoice.groupBy({ by: ['customerId'], where: { customerId: { in: ids }, status: { not: 'Cancelled' } }, _sum: { total: true, paid: true } }),
     db.appointment.groupBy({ by: ['customerId'], where: { customerId: { in: ids }, status: 'Completed' }, _count: true, _max: { date: true } }),
     db.staff.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
     db.appointment.groupBy({ by: ['customerId', 'branchId'], where: { customerId: { in: ids }, branchId: { not: null }, ...visitedAppt } }),
-    db.invoice.groupBy({ by: ['customerId', 'branchId'], where: { customerId: { in: ids }, branchId: { not: null }, status: { not: 'Void' } } }),
+    db.invoice.groupBy({ by: ['customerId', 'branchId'], where: { customerId: { in: ids }, branchId: { not: null }, status: { not: 'Cancelled' } } }),
   ]);
   const branchName = new Map(branches.map((b) => [b.id, b.name]));
   const visited = new Map<string, Set<string>>();

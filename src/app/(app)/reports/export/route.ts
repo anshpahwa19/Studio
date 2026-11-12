@@ -20,11 +20,11 @@ export async function GET(req: NextRequest) {
       ...list.map((e) => [e.date, e.category, e.description, e.vendor ?? '', e.method, e.branch?.name ?? '', round2(e.amount)])];
   } else {
     const list = await db.invoice.findMany({ where: { createdAt: range(from, to) }, orderBy: { createdAt: 'asc' }, include: { customer: true, branch: true, payments: true } });
-    rows = [['Bill', 'Date', 'Client', 'Mobile', 'Branch', 'Status', 'Subtotal', 'Discount', 'Taxable value', 'CGST', 'SGST', 'Total', 'Paid', 'Due', 'Payment methods'],
+    rows = [['Bill', 'Date', 'Client', 'Mobile', 'Branch', 'Status', 'Subtotal', 'Discount', 'Taxable value', 'CGST', 'SGST', 'Total', 'Paid', 'Refunded', 'Due', 'Payment methods'],
       ...list.map((i) => [
         i.number, isoDate(i.createdAt), i.customer.name, i.customer.phone, i.branch?.name ?? '', i.status,
-        round2(i.subtotal), round2(i.discount), round2(i.subtotal - i.discount), round2(i.tax / 2), round2(i.tax / 2), round2(i.total), round2(i.paid),
-        i.status === 'Void' ? 0 : round2(i.total - i.paid), [...new Set(i.payments.map((p) => p.method))].join(' + '),
+        round2(i.subtotal), round2(i.discount), round2(i.subtotal - i.discount), round2(i.tax / 2), round2(i.tax / 2), round2(i.total), round2(i.paid), round2(i.refunded),
+        i.status === 'Cancelled' ? 0 : round2(i.total - i.paid), [...new Set(i.payments.map((p) => p.method))].join(' + '),
       ])];
   }
 

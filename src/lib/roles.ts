@@ -30,5 +30,5 @@ const EDIT: Record<Area, Role[]> = {
 
 export const canView = (role: string, area: Area) => VIEW[area].includes(role as Role);
 export const canEdit = (role: string, area: Area) => EDIT[area].includes(role as Role);
-/** Voiding invoices and deleting records are limited to senior roles. */
+/** Cancelling and refunding bills and deleting records are limited to senior roles. */
 export const isSenior = (role: string) => role === 'Owner' || role === 'Manager';

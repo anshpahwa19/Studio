@@ -54,7 +54,7 @@ Viewers can only look. Its records are separate from the desktop app's database.
 - **Billing**: services and products on one bill, a % or ₹ discount, and split payments by Cash, UPI, Card or Bank.
   GST is added after the discount at the rate set in Settings (5% unless you change it) and printed as CGST and SGST.
   Untick **Charge GST** to make a bill without GST. A new client can be added right on the bill screen.
-  You can collect dues later and void a bill with a reason. Bills print or save as PDF from the bill page.
+  You can collect dues later and cancel a bill with a reason (optionally refunding what was paid), or refund money on a bill. Bills print or save as PDF from the bill page.
 - **Clients**: profiles with hair and nail notes, preferred stylist, visit history, total billed and balance due.
 - **Staff Attendance**: punch in and punch out times only. Press Punch in / Punch out to record the current time, or Edit times to
   enter or correct them. A working day with no punch-in is Absent (today, once the shift is over). A month grid shows
@@ -76,7 +76,7 @@ Viewers can only look. Its records are separate from the desktop app's database.
 | Receptionist | Today, Appointments, Billing, Clients, Inventory; can view Services |
 | Stylist | Today, Appointments, and viewing client notes |
 
-Only the Owner or a Manager can void a bill. Every save is checked on the server, not just hidden in the menu.
+Only the Owner or a Manager can cancel or refund a bill. Every save is checked on the server, not just hidden in the menu.
 
 ## How it is built
 

@@ -227,7 +227,7 @@ function AppointmentDetail({ appt, onClose, staff, editable, canBill }: Props & 
   if (!appt) return null;
   const total = appt.services.reduce((a, s) => a + s.price, 0);
   const stylist = staff.find((s) => s.id === appt.staffId)?.name ?? 'Former staff';
-  const billed = appt.invoice && appt.invoice.status !== 'Void';
+  const billed = appt.invoice && appt.invoice.status !== 'Cancelled';
 
   return (
     <Modal open onClose={onClose} title={appt.customer.name}>

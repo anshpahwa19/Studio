@@ -113,7 +113,7 @@ export async function addPayment(invoiceId: string, input: z.input<typeof paymen
     if (p.amount <= 0) throw new ActionError('Enter an amount above zero.');
     await db.$transaction(async (tx) => {
       const inv = await tx.invoice.findUnique({ where: { id: invoiceId } });
-      if (!inv || inv.status === 'Void') throw new ActionError('This bill cannot take payments.');
+      if (!inv || inv.status === 'Cancelled') throw new ActionError('This bill cannot take payments.');
       const due = round2(inv.total - inv.paid);
       if (p.amount > due + 0.005) throw new ActionError(`Only ${money(due)} is due on this bill.`);
       const paid = round2(inv.paid + p.amount);
@@ -125,25 +125,57 @@ export async function addPayment(invoiceId: string, input: z.input<typeof paymen
   });
 }
 
-export async function voidInvoice(invoiceId: string, reason: string) {
+export async function cancelInvoice(invoiceId: string, reason: string, refundMethod?: string | null) {
   return attempt(async () => {
     const user = await requireEdit('billing');
-    if (!isSenior(user.role)) throw new ActionError('Only the owner or a manager can void a bill.');
+    if (!isSenior(user.role)) throw new ActionError('Only the owner or a manager can cancel a bill.');
     const why = v.required(200).parse(reason);
+    const method = refundMethod ? z.enum(v.PAYMENT_METHODS).parse(refundMethod) : null;
     await db.$transaction(async (tx) => {
       const inv = await tx.invoice.findUnique({ where: { id: invoiceId }, include: { items: true } });
-      if (!inv || inv.status === 'Void') throw new ActionError('This bill is already void.');
+      if (!inv || inv.status === 'Cancelled') throw new ActionError('This bill is already cancelled.');
       for (const item of inv.items.filter((i) => i.productId)) {
         const p = await tx.product.update({ where: { id: item.productId! }, data: { stock: { increment: item.qty } } });
-        await tx.stockMovement.create({ data: { productId: p.id, type: 'RETURN', change: item.qty, balance: p.stock, invoiceId, note: `Bill ${inv.number} voided` } });
+        await tx.stockMovement.create({ data: { productId: p.id, type: 'RETURN', change: item.qty, balance: p.stock, invoiceId, note: `Bill ${inv.number} cancelled` } });
+      }
+      // Optionally give back whatever the client has paid and not yet been refunded.
+      const back = round2(inv.paid - inv.refunded);
+      if (method && back > 0.005) {
+        await tx.refund.create({ data: { invoiceId, amount: back, method, reason: `Bill cancelled: ${why}`, createdBy: user.name } });
       }
       await tx.invoice.update({
         where: { id: invoiceId },
-        data: { status: 'Void', appointmentId: null, notes: [inv.notes, `Voided by ${user.name}: ${why}`].filter(Boolean).join('\n') },
+        data: { refunded: method && back > 0.005 ? inv.paid : inv.refunded, status: 'Cancelled', appointmentId: null, notes: [inv.notes, `Cancelled by ${user.name}: ${why}`].filter(Boolean).join('\n') },
       });
     });
     revalidatePath('/billing');
     revalidatePath(`/billing/${invoiceId}`);
     revalidatePath('/dashboard');
+  });
+}
+
+const refundSchema = z.object({ amount: z.coerce.number().positive('must be above zero'), method: z.enum(v.PAYMENT_METHODS), reason: v.required(200) });
+export type RefundInput = z.input<typeof refundSchema>;
+
+/** Gives money back to the client for a bill. Bill totals do not change; use Cancel bill to take a sale off the books. */
+export async function refundInvoice(invoiceId: string, input: RefundInput) {
+  return attempt(async () => {
+    const user = await requireEdit('billing');
+    if (!isSenior(user.role)) throw new ActionError('Only the owner or a manager can refund a bill.');
+    const r = refundSchema.parse(input);
+    await db.$transaction(async (tx) => {
+      const inv = await tx.invoice.findUnique({ where: { id: invoiceId } });
+      if (!inv || inv.status === 'Cancelled') throw new ActionError('This bill cannot be refunded.');
+      const left = round2(inv.paid - inv.refunded);
+      if (left <= 0.005) throw new ActionError('Nothing left to refund on this bill.');
+      if (r.amount > left + 0.005) throw new ActionError(`Only ${money(left)} can still be refunded on this bill.`);
+      const amount = round2(r.amount);
+      await tx.refund.create({ data: { invoiceId, amount, method: r.method, reason: r.reason, createdBy: user.name } });
+      await tx.invoice.update({ where: { id: invoiceId }, data: { refunded: round2(inv.refunded + amount) } });
+    });
+    revalidatePath(`/billing/${invoiceId}`);
+    revalidatePath('/billing');
+    revalidatePath('/dashboard');
+    revalidatePath('/reports');
   });
 }

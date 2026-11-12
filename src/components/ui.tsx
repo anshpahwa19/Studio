@@ -156,5 +156,5 @@ export const ApptStatus = ({ status }: { status: string }) => {
 };
 export const apptLabel = (s: string) => APPT[s]?.[1] ?? s;
 
-const INV: Record<string, Tone> = { Paid: 'green', Partial: 'amber', Unpaid: 'red', Void: 'gray' };
+const INV: Record<string, Tone> = { Paid: 'green', Partial: 'amber', Unpaid: 'red', Cancelled: 'gray' };
 export const InvoiceStatus = ({ status }: { status: string }) => <Badge tone={INV[status]}>{status === 'Partial' ? 'Part paid' : status}</Badge>;

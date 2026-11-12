@@ -249,7 +249,8 @@ model Invoice {
   tax           Float         @default(0)
   total         Float
   paid          Float         @default(0)
-  status        String // Paid | Partial | Unpaid | Void
+  refunded      Float         @default(0) // money given back to the client; paid is never reduced
+  status        String // Paid | Partial | Unpaid | Cancelled
   notes         String?
   createdBy     String?
   createdAt     DateTime      @default(now())
@@ -258,6 +259,7 @@ model Invoice {
   branch        Branch?       @relation(fields: [branchId], references: [id])
   items         InvoiceItem[]
   payments      Payment[]
+  refunds       Refund[]
 
   @@index([createdAt])
   @@index([customerId])
@@ -289,6 +291,20 @@ model Payment {
   amount    Float
   method    String // Cash | UPI | Card | Bank
   reference String?
+  createdAt DateTime @default(now())
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+// Money handed back to a client for a bill. The bill's total and paid amounts stay as they were.
+model Refund {
+  id        String   @id @default(cuid())
+  invoiceId String
+  amount    Float
+  method    String // Cash | UPI | Card | Bank
+  reason    String
+  createdBy String?
   createdAt DateTime @default(now())
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 

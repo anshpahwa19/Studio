@@ -14,6 +14,7 @@ const today = isoDate();
 const GST = 5;
 
 async function wipe() {
+  await db.refund.deleteMany();
   await db.payment.deleteMany();
   await db.invoiceItem.deleteMany();
   await db.invoice.deleteMany();

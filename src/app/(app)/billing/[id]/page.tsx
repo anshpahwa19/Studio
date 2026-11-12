@@ -13,7 +13,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
   const [inv, s] = await Promise.all([
     db.invoice.findUnique({
       where: { id: params.id },
-      include: { customer: true, branch: true, items: { include: { staff: { select: { name: true } } } }, payments: { orderBy: { createdAt: 'asc' } } },
+      include: { customer: true, branch: true, items: { include: { staff: { select: { name: true } } } }, payments: { orderBy: { createdAt: 'asc' } }, refunds: { orderBy: { createdAt: 'asc' } } },
     }),
     db.settings.findUnique({ where: { id: 1 } }),
   ]);
@@ -21,23 +21,23 @@ export default async function InvoicePage({ params }: { params: { id: string } }
   const due = inv.total - inv.paid;
   const gst = inv.tax > 0;
   const rate = inv.items[0]?.taxRate ?? 0;
-  const isVoid = inv.status === 'Void';
+  const isCancelled = inv.status === 'Cancelled';
   const label = 'text-[9pt] font-bold uppercase tracking-[0.1em] text-stone-500';
 
   return (
     <>
       <div className="no-print mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link href="/billing" className="inline-flex items-center gap-1.5 text-[14px] font-medium text-ink-soft hover:text-ink"><ArrowLeft size={16} />All bills</Link>
-        <InvoiceActions id={inv.id} number={inv.number} due={isVoid ? 0 : due} isVoid={isVoid} canVoid={isSenior(user.role)} />
+        <InvoiceActions id={inv.id} number={inv.number} due={isCancelled ? 0 : due} isCancelled={isCancelled} canManage={isSenior(user.role)} refundable={Math.max(0, inv.paid - inv.refunded)} />
       </div>
 
       {/* A4 sheet: 210 × 297 mm. Scrolls sideways on small screens rather than reflowing. */}
       <div className="print-area -mx-4 overflow-x-auto bg-stone-100 px-4 py-6 sm:mx-0 sm:rounded-2xl sm:px-8 sm:py-10">
         <article id="invoice-sheet" className="print-sheet relative mx-auto flex flex-col bg-white text-[10pt] leading-snug text-stone-900 shadow-xl"
           style={{ width: '210mm', minHeight: '297mm', padding: '14mm 14mm 12mm' }}>
-          {isVoid && (
+          {isCancelled && (
             <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <span className="-rotate-[24deg] rounded-xl border-[6px] border-rose-300 px-10 py-3 text-[64pt] font-black tracking-[0.2em] text-rose-300/80">VOID</span>
+              <span className="-rotate-[24deg] rounded-xl border-[6px] border-rose-300 px-10 py-3 text-[48pt] font-black tracking-[0.15em] text-rose-300/80">CANCELLED</span>
             </div>
           )}
 
@@ -139,6 +139,18 @@ export default async function InvoicePage({ params }: { params: { id: string } }
                   </ul>
                 </div>
               )}
+              {inv.refunds.length > 0 && (
+                <div>
+                  <div className={label}>Refunds given</div>
+                  <ul className="mt-1 space-y-0.5 text-[9pt]">
+                    {inv.refunds.map((r) => (
+                      <li key={r.id} className="tabular flex justify-between gap-3 border-b border-dashed border-stone-200 py-0.5">
+                        <span>{fmtDateTime(r.createdAt)} · {r.method} · {r.reason}</span><span className="font-medium text-rose-700">− {money(r.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {inv.notes && <div><div className={label}>Notes</div><p className="mt-1 whitespace-pre-line text-[9pt] text-stone-600">{inv.notes}</p></div>}
             </div>
             <dl className="tabular self-start overflow-hidden rounded-lg border border-stone-200">
@@ -152,7 +164,8 @@ export default async function InvoicePage({ params }: { params: { id: string } }
               ) : <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">GST</dt><dd>Not charged</dd></div>}
               <div className="flex justify-between bg-violet-600 px-4 py-2.5 text-[12pt] font-bold text-white"><dt>Total</dt><dd>{money(inv.total)}</dd></div>
               <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">Paid</dt><dd>{money(inv.paid)}</dd></div>
-              {!isVoid && due > 0.005 && <div className="flex justify-between bg-amber-50 px-4 py-1.5 font-bold text-amber-800"><dt>Balance due</dt><dd>{money(due)}</dd></div>}
+              {inv.refunded > 0 && <div className="flex justify-between px-4 py-1.5"><dt className="text-stone-600">Refunded</dt><dd className="text-rose-700">− {money(inv.refunded)}</dd></div>}
+              {!isCancelled && due > 0.005 && <div className="flex justify-between bg-amber-50 px-4 py-1.5 font-bold text-amber-800"><dt>Balance due</dt><dd>{money(due)}</dd></div>}
             </dl>
           </section>
 

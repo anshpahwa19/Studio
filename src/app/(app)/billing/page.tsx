@@ -21,7 +21,7 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
   const [invoices, branches, totals, dues] = await Promise.all([
     db.invoice.findMany({ where, orderBy: { createdAt: 'desc' }, take: 200, include: { customer: { select: { name: true, phone: true } }, branch: { select: { name: true } }, _count: { select: { items: true } } } }),
     db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
-    db.invoice.aggregate({ where: { ...where, status: s.status ?? { not: 'Void' } }, _sum: { total: true, paid: true }, _count: true }),
+    db.invoice.aggregate({ where: { ...where, status: s.status ?? { not: 'Cancelled' } }, _sum: { total: true, paid: true }, _count: true }),
     db.invoice.aggregate({ where: { status: { in: ['Unpaid', 'Partial'] } }, _sum: { total: true, paid: true }, _count: true }),
   ]);
   const outstanding = (dues._sum.total ?? 0) - (dues._sum.paid ?? 0);
@@ -34,14 +34,14 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
         actions={<Link href="/billing/new" className="rounded-xl bg-violet-600 px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm hover:bg-violet-700">Create New Bill (POS)</Link>}
       />
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <Stat label="Bills shown" value={totals._count} note="Void bills excluded from totals" />
+        <Stat label="Bills shown" value={totals._count} note="Cancelled bills excluded from totals" />
         <Stat label="Billed" value={money0(totals._sum.total ?? 0)} note={`Collected ${money0(totals._sum.paid ?? 0)}`} />
         <Stat label="Outstanding dues" value={money0(outstanding)} note={`Across ${plural(dues._count, 'bill')}`} tone={outstanding > 0.5 ? 'warn' : undefined} />
       </div>
       <form className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto_auto_auto]">
         <Input name="q" defaultValue={s.q} placeholder="Bill number, client name or mobile" aria-label="Search bills" />
         <Select name="status" defaultValue={s.status ?? ''} aria-label="Status">
-          <option value="">Any status</option><option value="Paid">Paid</option><option value="Partial">Part paid</option><option value="Unpaid">Unpaid</option><option value="Void">Void</option>
+          <option value="">Any status</option><option value="Paid">Paid</option><option value="Partial">Part paid</option><option value="Unpaid">Unpaid</option><option value="Cancelled">Cancelled</option>
         </Select>
         <Select name="branch" defaultValue={s.branch ?? ''} aria-label="Branch">
           <option value="">All branches</option>
@@ -64,8 +64,8 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
                     <td className="text-ink-soft">{fmtDate(i.createdAt)}</td>
                     <td className="text-ink-soft">{i.branch?.name ?? '—'}</td>
                     <td className="tabular text-right font-medium">{money(i.total)}</td>
-                    <td className={`tabular text-right ${i.status !== 'Void' && i.total - i.paid > 0.005 ? 'text-amber-700' : 'text-ink-mute'}`}>{i.status !== 'Void' && i.total - i.paid > 0.005 ? money(i.total - i.paid) : '—'}</td>
-                    <td><InvoiceStatus status={i.status} /></td>
+                    <td className={`tabular text-right ${i.status !== 'Cancelled' && i.total - i.paid > 0.005 ? 'text-amber-700' : 'text-ink-mute'}`}>{i.status !== 'Cancelled' && i.total - i.paid > 0.005 ? money(i.total - i.paid) : '—'}</td>
+                    <td><InvoiceStatus status={i.status} />{i.refunded > 0 && <div className="mt-0.5 text-[11.5px] text-rose-600">Refunded {money(i.refunded)}</div>}</td>
                   </tr>
                 ))}
               </tbody>

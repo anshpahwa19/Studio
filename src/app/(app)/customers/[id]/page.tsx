@@ -20,7 +20,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
   if (!c) notFound();
   const [byApptBranch, byBillBranch, allBranches] = await Promise.all([
     db.appointment.groupBy({ by: ['branchId'], where: { customerId: c.id, status: 'Completed', branchId: { not: null } }, _count: true, _max: { date: true } }),
-    db.invoice.groupBy({ by: ['branchId'], where: { customerId: c.id, status: { not: 'Void' }, branchId: { not: null } }, _sum: { total: true } }),
+    db.invoice.groupBy({ by: ['branchId'], where: { customerId: c.id, status: { not: 'Cancelled' }, branchId: { not: null } }, _sum: { total: true } }),
     db.branch.findMany({ select: { id: true, name: true } }),
   ]);
   const branchVisits = allBranches
@@ -28,7 +28,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
     .filter((b) => b.visits || b.billed)
     .sort((a, b) => b.billed - a.billed);
   const staff = await db.staff.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
-  const live = c.invoices.filter((i) => i.status !== 'Void');
+  const live = c.invoices.filter((i) => i.status !== 'Cancelled');
   const billed = live.reduce((a, i) => a + i.total, 0);
   const due = live.reduce((a, i) => a + i.total - i.paid, 0);
   const visits = c.appointments.filter((a) => a.status === 'Completed').length;
