@@ -34,6 +34,14 @@ export async function archiveService(id: string) {
   });
 }
 
+export async function restoreService(id: string) {
+  return attempt(async () => {
+    await requireEdit('services');
+    await db.service.update({ where: { id }, data: { active: true } });
+    revalidatePath('/services');
+  });
+}
+
 export async function addCategory(name: string) {
   return attempt(async () => {
     await requireEdit('services');

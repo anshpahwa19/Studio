@@ -9,9 +9,9 @@ export default async function ServicesPage() {
   const user = await requirePage('services');
   const categories = await db.serviceCategory.findMany({
     orderBy: { sortOrder: 'asc' },
-    include: { services: { where: { active: true }, orderBy: { name: 'asc' } } },
+    include: { services: { orderBy: { name: 'asc' } } },
   });
-  const count = categories.reduce((a, c) => a + c.services.length, 0);
+  const count = categories.reduce((a, c) => a + c.services.filter((s) => s.active).length, 0);
   return (
     <>
       <PageHeader title="Services & Pricing" subtitle={`${plural(count, 'service')} in ${plural(categories.length, 'category', 'categories')}. Prices are before GST, which is set in Settings.`} />

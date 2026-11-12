@@ -1,13 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { Button, Card, Empty, Field, Input, Select, Textarea } from '@/components/ui';
+import { Badge, Button, Card, Empty, Field, Input, Select, Textarea } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { fmtDuration, money0 } from '@/lib/format';
-import { addCategory, archiveService, saveService, type ServiceInput } from './actions';
+import { addCategory, archiveService, restoreService, saveService, type ServiceInput } from './actions';
 
-type Service = { id: string; name: string; description: string | null; categoryId: string; price: number; duration: number };
+type Service = { id: string; name: string; description: string | null; categoryId: string; price: number; duration: number; active: boolean };
 type Category = { id: string; name: string; services: Service[] };
 
 export function ServiceManager({ categories, editable }: { categories: Category[]; editable: boolean }) {
@@ -16,11 +16,13 @@ export function ServiceManager({ categories, editable }: { categories: Category[
   const [newCat, setNewCat] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const { run, pending } = useAction();
 
+  const archivedCount = categories.reduce((a, c) => a + c.services.filter((s) => !s.active).length, 0);
   const shown = categories
     .filter((c) => filter === 'all' || c.id === filter)
-    .map((c) => ({ ...c, services: c.services.filter((s) => s.name.toLowerCase().includes(q.toLowerCase())) }))
+    .map((c) => ({ ...c, services: c.services.filter((s) => (showArchived || s.active) && s.name.toLowerCase().includes(q.toLowerCase())) }))
     .filter((c) => c.services.length || (!q && filter !== 'all'));
 
   return (
@@ -31,6 +33,10 @@ export function ServiceManager({ categories, editable }: { categories: Category[
           <option value="all">All categories</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
+        <label className="flex cursor-pointer items-center gap-2 text-[14px] text-ink-soft">
+          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="h-4 w-4 accent-violet-600" />
+          Show archived{archivedCount > 0 && ` (${archivedCount})`}
+        </label>
         {editable && (
           <div className="ml-auto flex gap-2">
             <Button variant="secondary" onClick={() => setNewCat('')}>Add category</Button>
@@ -44,13 +50,13 @@ export function ServiceManager({ categories, editable }: { categories: Category[
       <div className="space-y-5">
         {shown.length === 0 && <Card><Empty title="No services match" /></Card>}
         {shown.map((c) => (
-          <Card key={c.id} title={c.name} pad={false} actions={<span className="text-[12.5px] text-ink-mute">{c.services.length} services</span>}>
+          <Card key={c.id} title={c.name} pad={false} actions={<span className="text-[12.5px] text-ink-mute">{c.services.filter((s) => s.active).length} services</span>}>
             {c.services.length === 0 ? <Empty title="No services in this category yet" /> : (
               <ul className="divide-y divide-line">
                 {c.services.map((s) => (
-                  <li key={s.id} className="flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3">
+                  <li key={s.id} className={`flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3 ${s.active ? '' : 'bg-stone-50'}`}>
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium">{s.name}</div>
+                      <div className="flex items-center gap-2 font-medium">{s.name}{!s.active && <Badge>Archived</Badge>}</div>
                       {s.description && <div className="text-[12.5px] text-ink-mute">{s.description}</div>}
                     </div>
                     <div className="tabular w-16 text-ink-soft">{fmtDuration(s.duration)}</div>
@@ -58,7 +64,9 @@ export function ServiceManager({ categories, editable }: { categories: Category[
                     {editable && (
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" onClick={() => setEditing({ ...s })}>Edit</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setArchiving(s)}>Archive</Button>
+                        {s.active
+                          ? <Button size="sm" variant="ghost" onClick={() => setArchiving(s)}>Archive</Button>
+                          : <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => restoreService(s.id), 'Service restored')}>Unarchive</Button>}
                       </div>
                     )}
                   </li>
