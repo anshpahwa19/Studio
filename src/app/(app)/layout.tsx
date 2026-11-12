@@ -27,16 +27,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect('/login');
   const billing = canView(user.role, 'billing');
   const stock = canView(user.role, 'inventory');
-  const [settings, waiting, dues, products] = await Promise.all([
+  const buying = canView(user.role, 'suppliers');
+  const [settings, waiting, dues, products, supplierBills] = await Promise.all([
     db.settings.findUnique({ where: { id: 1 }, select: { name: true } }),
     db.appointment.count({ where: { date: isoDate(), status: 'CheckedIn' } }),
     billing ? db.invoice.count({ where: { status: { in: ['Unpaid', 'Partial'] } } }) : 0,
     stock ? db.product.findMany({ where: { active: true }, select: { stock: true, reorderLevel: true } }) : [],
+    buying ? db.supplierBill.findMany({ where: { dueDate: { lt: isoDate() } }, select: { amount: true, paid: true } }) : [],
   ]);
+  const overdueBills = supplierBills.filter((b) => b.amount - b.paid > 0.005).length;
   const low = products.filter((p) => p.stock <= p.reorderLevel).length;
   const alerts = [
     ...(waiting ? [{ href: '/appointments', text: `${plural(waiting, 'client')} checked in and waiting`, tone: 'violet' as const }] : []),
     ...(dues ? [{ href: '/billing', text: `${plural(dues, 'bill')} with money still due`, tone: 'amber' as const }] : []),
+    ...(overdueBills ? [{ href: '/suppliers', text: `${plural(overdueBills, 'supplier bill')} past the pay-by date`, tone: 'red' as const }] : []),
     ...(low ? [{ href: '/inventory', text: `${plural(low, 'product')} to reorder`, tone: 'red' as const }] : []),
   ];
   const items = NAV.filter((n) => canView(user.role, n.area)).map(({ href, label }) => ({ href, label }));

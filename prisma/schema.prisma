@@ -167,6 +167,39 @@ model Supplier {
   createdAt DateTime        @default(now())
   products  Product[]
   movements StockMovement[]
+  bills     SupplierBill[]
+}
+
+// A bill received from a supplier for goods bought, and the payments made against it.
+model SupplierBill {
+  id         String            @id @default(cuid())
+  supplierId String
+  billNumber String? // optional: the bill itself is the record
+  date       String
+  dueDate    String?
+  amount     Float // total payable, including any GST
+  paid       Float             @default(0)
+  notes      String?
+  fileName   String? // the uploaded copy of the bill (photo or PDF), kept in the database
+  fileType   String?
+  fileData   Bytes?
+  createdAt  DateTime          @default(now())
+  supplier   Supplier          @relation(fields: [supplierId], references: [id])
+  payments   SupplierPayment[]
+
+  @@unique([supplierId, billNumber])
+  @@index([date])
+}
+
+model SupplierPayment {
+  id        String       @id @default(cuid())
+  billId    String
+  date      String
+  amount    Float
+  method    String // Cash | UPI | Card | Bank
+  reference String?
+  createdAt DateTime     @default(now())
+  bill      SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
 }
 
 model Product {

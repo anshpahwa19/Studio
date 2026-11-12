@@ -1,15 +1,16 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { Mail, MapPin, Phone, Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input, Textarea } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
-import { fmtDate, plural } from '@/lib/format';
+import { fmtDate, money0, plural } from '@/lib/format';
 import { saveSupplier, setSupplierActive, type SupplierInput } from './actions';
 
 type Row = {
   id: string; name: string; contact: string | null; phone: string | null; email: string | null; address: string | null; gstin: string | null; notes: string | null;
-  active: boolean; products: number; deliveries: number; units: number; lastDelivery: string | null;
+  active: boolean; billed: number; due: number; products: number; deliveries: number; units: number; lastDelivery: string | null;
 };
 
 export function SupplierManager({ suppliers, editable }: { suppliers: Row[]; editable: boolean }) {
@@ -39,10 +40,10 @@ export function SupplierManager({ suppliers, editable }: { suppliers: Row[]; edi
             <Card key={s.id} className={s.active ? '' : 'bg-stone-50'}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[16px] font-semibold">{s.name}{!s.active && <Badge>Archived</Badge>}</div>
+                  <div className="flex items-center gap-2 text-[16px] font-semibold"><Link href={`/suppliers/${s.id}`} className="hover:text-violet-700">{s.name}</Link>{!s.active && <Badge>Archived</Badge>}</div>
                   {s.contact && <div className="text-ink-mute">{s.contact}</div>}
                 </div>
-                {s.gstin && <Badge tone="blue">GSTIN {s.gstin}</Badge>}
+                {s.due > 0.5 ? <Badge tone="amber">{money0(s.due)} due</Badge> : s.gstin && <Badge tone="blue">GSTIN {s.gstin}</Badge>}
               </div>
               <div className="mt-3 space-y-1 text-[13.5px] text-ink-soft">
                 {s.phone && <div className="flex items-center gap-2"><Phone size={14} className="text-ink-mute" />{s.phone}</div>}
@@ -52,10 +53,11 @@ export function SupplierManager({ suppliers, editable }: { suppliers: Row[]; edi
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
                 <span className="text-[12.5px] text-ink-mute">
-                  {plural(s.products, 'product')} · {s.deliveries ? `${plural(s.deliveries, 'delivery', 'deliveries')}, ${s.units} units, last ${fmtDate(s.lastDelivery!)}` : 'no deliveries recorded'}
+                  {s.billed > 0 ? `${money0(s.billed)} billed · ` : ''}{plural(s.products, 'product')} · {s.deliveries ? `${plural(s.deliveries, 'delivery', 'deliveries')}, ${s.units} units, last ${fmtDate(s.lastDelivery!)}` : 'no deliveries recorded'}
                 </span>
                 {editable && (
                   <div className="flex gap-1">
+                    <Link href={`/suppliers/${s.id}`} className="inline-flex items-center rounded-lg px-2.5 py-1 text-[12.5px] font-semibold text-violet-700 hover:bg-violet-50">Bills</Link>
                     <Button size="sm" variant="ghost" onClick={() => setF({ ...s })}>Edit</Button>
                     {s.active
                       ? <Button size="sm" variant="ghost" onClick={() => setArchiving(s)}>Archive</Button>
