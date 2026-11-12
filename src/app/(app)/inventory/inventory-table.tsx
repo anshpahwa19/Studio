@@ -5,19 +5,22 @@ import { Badge, Button, Card, Empty, Field, Input, Select } from '@/components/u
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { fmtDateTime, isoDate, money } from '@/lib/format';
-import { archiveProduct, moveStock, saveProduct, stockHistory, type ProductInput } from './actions';
+import { archiveProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from './actions';
 
-type Product = { id: string; name: string; sku: string | null; category: string; supplierId: string | null; supplierName: string | null; costPrice: number; price: number; stock: number; reorderLevel: number; unit: string };
+type Product = { id: string; name: string; sku: string | null; category: string; supplierId: string | null; supplierName: string | null; costPrice: number; price: number; stock: number; byBranch: Record<string, number>; reorderLevel: number; unit: string };
+type Branch = { id: string; name: string };
 type Move = Awaited<ReturnType<typeof stockHistory>>[number];
 
-const MOVE_LABEL: Record<string, string> = { IN: 'Received', OUT: 'Used / removed', ADJUST: 'Count correction', SALE: 'Sold', RETURN: 'Returned' };
+const MOVE_LABEL: Record<string, string> = { IN: 'Received', OUT: 'Used / removed', ADJUST: 'Count correction', SALE: 'Sold', RETURN: 'Returned', TRANSFER: 'Transfer' };
 
-export function InventoryTable({ products, suppliers, autoStock = false }: { products: Product[]; suppliers: { id: string; name: string }[]; autoStock?: boolean }) {
+export function InventoryTable({ products, suppliers, branches, branch, autoStock = false }: { products: Product[]; suppliers: { id: string; name: string }[]; branches: Branch[]; branch: string; autoStock?: boolean }) {
+  const startBranch = branch || branches[0]?.id || '';
+  const otherBranch = (from: string) => branches.find((b) => b.id !== from)?.id ?? '';
   const [q, setQ] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
   const [edit, setEdit] = useState<ProductInput | null>(null);
-  const [move, setMove] = useState<{ p: Product; type: 'IN' | 'OUT' | 'ADJUST'; qty: string; note: string; date: string; supplierId: string; pick?: boolean } | null>(
-    autoStock && products.length ? { p: products[0], type: 'IN', qty: '', note: '', date: isoDate(), supplierId: products[0].supplierId ?? '', pick: true } : null,
+  const [move, setMove] = useState<{ p: Product; type: 'IN' | 'OUT' | 'ADJUST' | 'TRANSFER'; qty: string; note: string; date: string; supplierId: string; branchId: string; toBranchId: string; pick?: boolean } | null>(
+    autoStock && products.length ? { p: products[0], type: 'IN', qty: '', note: '', date: isoDate(), supplierId: products[0].supplierId ?? '', branchId: startBranch, toBranchId: otherBranch(startBranch), pick: true } : null,
   );
   const [history, setHistory] = useState<{ p: Product; rows: Move[] | null } | null>(null);
   const { run, pending } = useAction();
@@ -30,7 +33,7 @@ export function InventoryTable({ products, suppliers, autoStock = false }: { pro
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, SKU or category" className="max-w-xs" aria-label="Search products" />
         <label className="flex items-center gap-2 text-[13.5px]"><input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} className="h-4 w-4 accent-plum-600" />Only items to reorder</label>
-        <Button className="ml-auto" onClick={() => setEdit({ name: '', category: categories[0] ?? 'General', costPrice: 0, price: '' as unknown as number, reorderLevel: 5, unit: 'pcs', openingStock: 0 })}>
+        <Button className="ml-auto" onClick={() => setEdit({ name: '', category: categories[0] ?? 'General', costPrice: 0, price: '' as unknown as number, reorderLevel: 5, unit: 'pcs', openingStock: 0, openingBranchId: startBranch || null })}>
           <Plus size={16} />Add product
         </Button>
       </div>
@@ -51,11 +54,12 @@ export function InventoryTable({ products, suppliers, autoStock = false }: { pro
                       <td className="tabular text-right text-ink-soft">{p.price > 0 ? `${Math.round(((p.price - p.costPrice) / p.price) * 100)}%` : '—'}</td>
                       <td className="text-right">
                         <span className="tabular font-medium">{p.stock} {p.unit}</span>
+                        {!branch && branches.length > 1 && <div className="text-[11.5px] text-ink-mute">{branches.map((b) => `${b.name.split(' ')[0]} ${p.byBranch[b.id] ?? 0}`).join(' · ')}</div>}
                         {low && <div><Badge tone={p.stock === 0 ? 'red' : 'amber'}>{p.stock === 0 ? 'Out of stock' : 'Reorder'}</Badge></div>}
                       </td>
                       <td>
                         <div className="flex justify-end gap-1">
-                          <Button size="sm" variant="secondary" onClick={() => setMove({ p, type: 'IN', qty: '', note: '', date: isoDate(), supplierId: p.supplierId ?? '' })}>Stock</Button>
+                          <Button size="sm" variant="secondary" onClick={() => setMove({ p, type: 'IN', qty: '', note: '', date: isoDate(), supplierId: p.supplierId ?? '', branchId: startBranch, toBranchId: otherBranch(startBranch) })}>Stock</Button>
                           <Button size="sm" variant="ghost" onClick={async () => { setHistory({ p, rows: null }); setHistory({ p, rows: await stockHistory(p.id) }); }}>History</Button>
                           <Button size="sm" variant="ghost" onClick={() => setEdit({ ...p })}>Edit</Button>
                         </div>
@@ -83,6 +87,7 @@ export function InventoryTable({ products, suppliers, autoStock = false }: { pro
             <Field label="Unit"><Input value={edit.unit} onChange={(e) => setEdit({ ...edit, unit: e.target.value })} required placeholder="pcs, ml, bottle" /></Field>
             <Field label="Reorder at"><Input type="number" min="0" value={edit.reorderLevel} onChange={(e) => setEdit({ ...edit, reorderLevel: e.target.value as unknown as number })} /></Field>
             {!edit.id && <Field label="Opening stock"><Input type="number" min="0" value={edit.openingStock ?? 0} onChange={(e) => setEdit({ ...edit, openingStock: e.target.value as unknown as number })} /></Field>}
+            {!edit.id && branches.length > 0 && <Field label="Opening stock is at"><Select value={edit.openingBranchId ?? ''} onChange={(e) => setEdit({ ...edit, openingBranchId: e.target.value })}>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select></Field>}
             <Field label="Supplier" className="col-span-2" hint={suppliers.length ? undefined : 'Add suppliers on the Suppliers page first'}>
               <Select value={edit.supplierId ?? ''} onChange={(e) => setEdit({ ...edit, supplierId: e.target.value || null })}>
                 <option value="">No supplier</option>
@@ -101,7 +106,11 @@ export function InventoryTable({ products, suppliers, autoStock = false }: { pro
         {move && (
           <form className="space-y-4" onSubmit={async (e) => {
             e.preventDefault();
-            if ((await run(() => moveStock({ productId: move.p.id, type: move.type, qty: Number(move.qty), note: move.note, date: move.date, supplierId: move.supplierId || null }), 'Stock updated')) !== false) setMove(null);
+            const t = move.type;
+            const job = t === 'TRANSFER'
+              ? () => transferStock({ productId: move.p.id, fromBranchId: move.branchId, toBranchId: move.toBranchId, qty: Number(move.qty), note: move.note, date: move.date })
+              : () => moveStock({ productId: move.p.id, branchId: move.branchId || null, type: t, qty: Number(move.qty), note: move.note, date: move.date, supplierId: move.supplierId || null });
+            if ((await run(job, move.type === 'TRANSFER' ? 'Stock transferred' : 'Stock updated')) !== false) setMove(null);
           }}>
             {move.pick && (
               <Field label="Product">
@@ -110,16 +119,32 @@ export function InventoryTable({ products, suppliers, autoStock = false }: { pro
                 </Select>
               </Field>
             )}
-            <p className="text-ink-soft">Currently {move.p.stock} {move.p.unit} in stock.</p>
-            <div className="grid grid-cols-3 gap-1 rounded-lg border border-line p-1">
-              {(['IN', 'OUT', 'ADJUST'] as const).map((t) => (
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-line p-1 sm:grid-cols-4">
+              {(branches.length > 1 ? (['IN', 'OUT', 'ADJUST', 'TRANSFER'] as const) : (['IN', 'OUT', 'ADJUST'] as const)).map((t) => (
                 <button key={t} type="button" aria-pressed={move.type === t} onClick={() => setMove({ ...move, type: t })}
                   className={`rounded-md px-2 py-1.5 text-[13px] font-medium ${move.type === t ? 'bg-plum-600 text-white' : 'text-ink-soft hover:bg-canvas'}`}>
-                  {t === 'IN' ? 'Received' : t === 'OUT' ? 'Used / removed' : 'Set count'}
+                  {t === 'IN' ? 'Received' : t === 'OUT' ? 'Used / removed' : t === 'ADJUST' ? 'Set count' : 'Transfer'}
                 </button>
               ))}
             </div>
-            <Field label={move.type === 'ADJUST' ? 'Actual count on the shelf' : 'Quantity'}>
+            {branches.length > 0 && (
+              <div className={move.type === 'TRANSFER' ? 'grid grid-cols-2 gap-4' : ''}>
+                <Field label={move.type === 'TRANSFER' ? 'From branch' : 'Branch'}>
+                  <Select value={move.branchId} onChange={(e) => setMove({ ...move, branchId: e.target.value, toBranchId: move.toBranchId === e.target.value ? otherBranch(e.target.value) : move.toBranchId })}>
+                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </Select>
+                </Field>
+                {move.type === 'TRANSFER' && (
+                  <Field label="To branch">
+                    <Select value={move.toBranchId} onChange={(e) => setMove({ ...move, toBranchId: e.target.value })}>
+                      {branches.filter((b) => b.id !== move.branchId).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </Select>
+                  </Field>
+                )}
+              </div>
+            )}
+            <p className="text-ink-soft">Currently {branches.length ? move.p.byBranch[move.branchId] ?? 0 : move.p.stock} {move.p.unit} in stock{branches.length ? ` at ${branches.find((b) => b.id === move.branchId)?.name}` : ''}.</p>
+            <Field label={move.type === 'ADJUST' ? 'Actual count on the shelf' : move.type === 'TRANSFER' ? 'Quantity to move' : 'Quantity'}>
               <Input type="number" min="0" value={move.qty} onChange={(e) => setMove({ ...move, qty: e.target.value })} required autoFocus />
             </Field>
             {move.type === 'IN' && (
@@ -132,7 +157,7 @@ export function InventoryTable({ products, suppliers, autoStock = false }: { pro
             )}
             <Field label={move.type === 'IN' ? 'Date received' : 'Date'}><Input type="date" max={isoDate()} value={move.date} onChange={(e) => setMove({ ...move, date: e.target.value })} required /></Field>
             <Field label="Note"><Input value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} placeholder={move.type === 'IN' ? 'Supplier bill number' : 'Used in salon, damaged, expired'} /></Field>
-            <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setMove(null)}>Cancel</Button><Button type="submit" disabled={pending}>Update stock</Button></div>
+            <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setMove(null)}>Cancel</Button><Button type="submit" disabled={pending}>{move.type === 'TRANSFER' ? 'Transfer stock' : 'Update stock'}</Button></div>
           </form>
         )}
       </Modal>
@@ -142,7 +167,7 @@ export function InventoryTable({ products, suppliers, autoStock = false }: { pro
           <ul className="max-h-96 divide-y divide-line overflow-y-auto">
             {history.rows.map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-3 py-2 text-[13px]">
-                <div className="min-w-0"><div className="font-medium">{MOVE_LABEL[m.type] ?? m.type}</div><div className="truncate text-[12px] text-ink-mute">{fmtDateTime(m.createdAt)}{m.supplier && ` · ${m.supplier.name}`}{m.note && ` · ${m.note}`}</div></div>
+                <div className="min-w-0"><div className="font-medium">{MOVE_LABEL[m.type] ?? m.type}</div><div className="truncate text-[12px] text-ink-mute">{fmtDateTime(m.createdAt)}{m.branch && ` · ${m.branch.name}`}{m.supplier && ` · ${m.supplier.name}`}{m.note && ` · ${m.note}`}</div></div>
                 <div className="tabular shrink-0 text-right"><span className={m.change > 0 ? 'text-emerald-700' : 'text-red-700'}>{m.change > 0 ? '+' : ''}{m.change}</span><div className="text-[12px] text-ink-mute">→ {m.balance}</div></div>
               </li>
             ))}

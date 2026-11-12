@@ -61,7 +61,7 @@ Viewers can only look. Its records are separate from the desktop app's database.
   days present, days absent and hours per person. Owners, Managers and Receptionists can use it.
 - **Suppliers**: vendor contacts (phone, email, GSTIN, address) and the bills you get from them: upload the bill (PDF or photo) with its amount, record payments against it, and see what is due or overdue. Link each product to a supplier, pick who stock was received from, and see
   deliveries per supplier and in the monthly stock list. Owners and Managers only.
-- **Services, Staff, Inventory, Expenses**: the service menu, team hours and pay (a fixed monthly salary or a commission %), stock
+- **Services, Staff, Inventory, Expenses**: the service menu, team hours and pay (a fixed monthly salary or a commission %), stock counted per branch (with transfers between branches), expenses by branch, stock
   that goes down on each sale with a full history, and monthly expenses by category.
 - **Reports**: sales before GST, expenses, profit, collections by payment method, top services and products, and
   each stylist's billed revenue and commission. Bills and expenses export as CSV for the accountant.

@@ -19,13 +19,13 @@ type Props = {
   gstRate: number;
   customers: { id: string; name: string; phone: string }[];
   services: { id: string; name: string; price: number; duration: number; category: string }[];
-  products: { id: string; name: string; price: number; stock: number; sku: string | null; category: string; unit: string }[];
+  products: { id: string; name: string; price: number; stock: number; byBranch: Record<string, number>; sku: string | null; category: string; unit: string }[];
   staff: { id: string; name: string }[];
   branches: { id: string; name: string }[];
   initial: { customerId: string; branchId: string; lines: PosLine[]; appointmentId: string | null };
 };
 
-export function PosForm({ gstRate, customers: initialCustomers, services, products, staff, branches, initial }: Props) {
+export function PosForm({ gstRate, customers: initialCustomers, services, products: allProducts, staff, branches, initial }: Props) {
   const router = useRouter();
   const { run, pending } = useAction();
   const [customers, setCustomers] = useState(initialCustomers);
@@ -34,6 +34,8 @@ export function PosForm({ gstRate, customers: initialCustomers, services, produc
   const [withGst, setWithGst] = useState(true);
   const [branchId, setBranchId] = useState(initial.branchId);
   const [lines, setLines] = useState<PosLine[]>(initial.lines);
+  // Stock shown and allowed is what the chosen branch has on its shelf.
+  const products = useMemo(() => allProducts.map((p) => ({ ...p, stock: branches.length ? p.byBranch[branchId] ?? 0 : p.stock })), [allProducts, branches.length, branchId]);
   const [tab, setTab] = useState<'service' | 'product'>('service');
   const [iq, setIq] = useState('');
   const [cat, setCat] = useState('All');

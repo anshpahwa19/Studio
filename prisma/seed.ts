@@ -122,11 +122,17 @@ async function main() {
     ['Gel Polish Gift Trio', 'NC-002', 'Nail Care', 'Gelish', 650, 1350, 4, 6],
     ['Professional Hair Spray 300ml', 'SP-001', 'Styling', "L'Oréal Professional", 320, 650, 20, 5],
   ];
+  const shelf = new Map<string, number>(); // running count per product and branch
   const suppliers: Record<string, string> = {};
   for (const name of new Set(products.map((p) => p[3]))) suppliers[name] = (await db.supplier.create({ data: { name } })).id;
   for (const [name, sku, category, supplier, costPrice, price, stock, reorderLevel] of products) {
     const p = await db.product.create({ data: { name, sku, category, supplierId: suppliers[supplier], costPrice, price, stock, reorderLevel } });
-    await db.stockMovement.create({ data: { productId: p.id, type: 'IN', change: stock, balance: stock, note: 'Opening stock', supplierId: suppliers[supplier] } });
+    // Opening stock is split between the two branches, 60% and 40%.
+    const spazeQty = Math.floor(stock * 0.4);
+    for (const [branchId, qty] of [[huda.id, stock - spazeQty], [spaze.id, spazeQty]] as const) {
+      shelf.set(`${p.id}|${branchId}`, qty);
+      if (qty > 0) await db.stockMovement.create({ data: { productId: p.id, type: 'IN', change: qty, balance: qty, note: 'Opening stock', supplierId: suppliers[supplier], branchId } });
+    }
     prod[name] = p;
   }
 
@@ -214,7 +220,9 @@ async function main() {
     });
     for (const r of raw.filter((r) => r.kind === 'product')) {
       const p = await db.product.update({ where: { id: r.ref.id }, data: { stock: { decrement: r.qty } } });
-      await db.stockMovement.create({ data: { productId: p.id, type: 'SALE', change: -r.qty, balance: p.stock, invoiceId: inv.id, note: `Sold on ${number}`, createdAt } });
+      const left = (shelf.get(`${p.id}|${opts.branchId}`) ?? 0) - r.qty;
+      shelf.set(`${p.id}|${opts.branchId}`, left);
+      await db.stockMovement.create({ data: { productId: p.id, type: 'SALE', change: -r.qty, balance: left, invoiceId: inv.id, branchId: opts.branchId, note: `Sold on ${number}`, createdAt } });
     }
     return inv;
   }

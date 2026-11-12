@@ -7,6 +7,7 @@ import { ActionError, requireEdit } from '@/lib/session';
 import { isSenior } from '@/lib/roles';
 import { computeBill, invoiceStatus } from '@/lib/billing';
 import { money, round2 } from '@/lib/format';
+import { branchQty } from '@/lib/stock';
 import * as v from '@/lib/validate';
 
 const payment = z.object({
@@ -55,9 +56,13 @@ export async function createInvoice(input: InvoiceInput) {
       // Stock check, adding up repeated lines for the same product.
       const need = new Map<string, number>();
       for (const l of lines) if (l.kind === 'product') need.set(l.refId, (need.get(l.refId) ?? 0) + l.qty);
+      // Products come off the shelf of the branch the bill is for.
+      const shelf = new Map<string, number>();
       for (const [pid, qty] of need) {
         const p = products.find((x) => x.id === pid)!;
-        if (p.stock < qty) throw new ActionError(`Only ${p.stock} ${p.unit} of ${p.name} in stock. Update the stock in Inventory if more has arrived.`);
+        const have = await branchQty(tx, pid, d.branchId ?? null);
+        shelf.set(pid, have);
+        if (have < qty) throw new ActionError(`Only ${have} ${p.unit} of ${p.name} in stock${d.branchId ? ' at this branch' : ''}. Update the stock in Inventory if more has arrived.`);
       }
 
       if (d.appointmentId) {
@@ -93,8 +98,8 @@ export async function createInvoice(input: InvoiceInput) {
       });
 
       for (const [pid, qty] of need) {
-        const p = await tx.product.update({ where: { id: pid }, data: { stock: { decrement: qty } } });
-        await tx.stockMovement.create({ data: { productId: pid, type: 'SALE', change: -qty, balance: p.stock, invoiceId: inv.id, note: `Sold on ${number}` } });
+        await tx.product.update({ where: { id: pid }, data: { stock: { decrement: qty } } });
+        await tx.stockMovement.create({ data: { productId: pid, type: 'SALE', change: -qty, balance: (shelf.get(pid) ?? 0) - qty, invoiceId: inv.id, branchId: d.branchId ?? null, note: `Sold on ${number}` } });
       }
       if (d.appointmentId) await tx.appointment.update({ where: { id: d.appointmentId }, data: { status: 'Completed' } });
       return inv.id;
@@ -136,7 +141,8 @@ export async function cancelInvoice(invoiceId: string, reason: string, refundMet
       if (!inv || inv.status === 'Cancelled') throw new ActionError('This bill is already cancelled.');
       for (const item of inv.items.filter((i) => i.productId)) {
         const p = await tx.product.update({ where: { id: item.productId! }, data: { stock: { increment: item.qty } } });
-        await tx.stockMovement.create({ data: { productId: p.id, type: 'RETURN', change: item.qty, balance: p.stock, invoiceId, note: `Bill ${inv.number} cancelled` } });
+        const here = await branchQty(tx, p.id, inv.branchId);
+        await tx.stockMovement.create({ data: { productId: p.id, type: 'RETURN', change: item.qty, balance: here + item.qty, branchId: inv.branchId, invoiceId, note: `Bill ${inv.number} cancelled` } });
       }
       // Optionally give back whatever the client has paid and not yet been refunded.
       const back = round2(inv.paid - inv.refunded);

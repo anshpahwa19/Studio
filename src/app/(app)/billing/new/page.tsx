@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { stockByBranch } from '@/lib/stock';
 import { requirePage } from '@/lib/session';
 import { PageHeader } from '@/components/ui';
 import { PosForm, type PosLine } from './pos-form';
@@ -14,6 +15,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { cu
     db.settings.findUniqueOrThrow({ where: { id: 1 }, select: { gstRate: true } }),
   ]);
 
+  const shelves = await stockByBranch(products.map((p) => p.id));
   let customerId = searchParams.customer ?? '';
   let branchId = branches[0]?.id ?? '';
   let lines: PosLine[] = [];
@@ -34,7 +36,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { cu
   return (
     <>
       <PageHeader title="Point of Sale (POS) Counter" subtitle={appointment ? 'Billing a completed appointment. Services are filled in from the booking.' : `Prices are before GST. GST at ${settings.gstRate}% is added after any discount, or turn it off for this bill.`} />
-      <PosForm gstRate={settings.gstRate} customers={customers} services={services.map((s) => ({ ...s, category: s.category.name }))} products={products} staff={staff} branches={branches}
+      <PosForm gstRate={settings.gstRate} customers={customers} services={services.map((s) => ({ ...s, category: s.category.name }))} products={products.map((p) => ({ ...p, byBranch: Object.fromEntries(shelves.get(p.id) ?? []) }))} staff={staff} branches={branches}
         initial={{ customerId, branchId, lines, appointmentId: appointment?.id ?? null }} />
     </>
   );
