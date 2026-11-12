@@ -57,6 +57,22 @@ export async function archiveProduct(id: string) {
   });
 }
 
+/** Deletes a product. One that already appears on a bill is archived instead, so old bills stay intact. */
+export async function deleteProduct(id: string) {
+  return attempt(async () => {
+    await requireEdit('inventory');
+    const onBills = await db.invoiceItem.count({ where: { productId: id } });
+    if (onBills) {
+      await db.product.update({ where: { id }, data: { active: false } });
+      revalidatePath('/inventory');
+      return { archived: true };
+    }
+    await db.$transaction([db.stockMovement.deleteMany({ where: { productId: id } }), db.product.delete({ where: { id } })]);
+    revalidatePath('/inventory');
+    return { archived: false };
+  });
+}
+
 const moveSchema = z.object({
   productId: v.id,
   branchId: v.optional(40),

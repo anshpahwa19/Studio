@@ -5,7 +5,8 @@ import { Badge, Button, Card, Empty, Field, Input, Select } from '@/components/u
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { fmtDateTime, isoDate, money } from '@/lib/format';
-import { archiveProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from './actions';
+import { toast } from '@/components/toast';
+import { deleteProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from './actions';
 
 type Product = { id: string; name: string; sku: string | null; category: string; supplierId: string | null; supplierName: string | null; costPrice: number; price: number; stock: number; byBranch: Record<string, number>; reorderLevel: number; unit: string };
 type Branch = { id: string; name: string };
@@ -105,7 +106,7 @@ export function InventoryTable({ products, suppliers, branches, branch, autoStoc
               </Select>
             </Field>
             <div className="col-span-2 flex justify-between gap-2">
-              {edit.id ? <Button variant="danger" onClick={async () => { if ((await run(() => archiveProduct(edit.id!), 'Product archived')) !== false) setEdit(null); }}>Archive</Button> : <span />}
+              {edit.id ? <Button variant="danger" onClick={async () => { if (!window.confirm('Delete this product and its stock history?')) return; const r = await run(() => deleteProduct(edit.id!)); if (r !== false) { toast.ok(r?.archived ? 'This product is on past bills, so it was archived instead of deleted' : 'Product deleted'); setEdit(null); } }}>Delete</Button> : <span />}
               <div className="flex gap-2"><Button variant="secondary" onClick={() => setEdit(null)}>Cancel</Button><Button type="submit" disabled={pending}>Save product</Button></div>
             </div>
           </form>
