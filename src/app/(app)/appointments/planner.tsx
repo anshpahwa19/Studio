@@ -26,15 +26,35 @@ type Props = {
   branches: Branch[]; hours: { open: string; close: string }; editable: boolean; canBill: boolean; bookFor: string | null;
 };
 
-const PX_PER_MIN = 1.1;
+const PX_PER_MIN = 1.5;
 const BLOCK: Record<string, string> = {
-  Booked: 'border-sky-300 bg-sky-50 text-sky-950',
-  CheckedIn: 'border-amber-300 bg-amber-50 text-amber-950',
-  InService: 'border-plum-200 bg-plum-50 text-plum-700',
-  Completed: 'border-emerald-300 bg-emerald-50 text-emerald-950',
-  Cancelled: 'border-stone-200 bg-stone-50 text-stone-400 line-through',
-  NoShow: 'border-red-200 bg-red-50 text-red-400 line-through',
+  Booked: 'border-sky-300 border-l-sky-500 bg-sky-50 text-sky-950',
+  CheckedIn: 'border-amber-300 border-l-amber-500 bg-amber-50 text-amber-950',
+  InService: 'border-violet-300 border-l-violet-600 bg-violet-50 text-violet-950',
+  Completed: 'border-emerald-300 border-l-emerald-500 bg-emerald-50 text-emerald-950',
+  Cancelled: 'border-stone-200 border-l-stone-300 bg-stone-50 text-stone-400 line-through',
+  NoShow: 'border-red-200 border-l-red-300 bg-red-50 text-red-400 line-through',
 };
+const DOT: Record<string, string> = { Booked: 'bg-sky-500', CheckedIn: 'bg-amber-500', InService: 'bg-violet-600', Completed: 'bg-emerald-500', Cancelled: 'bg-stone-300', NoShow: 'bg-red-300' };
+const STATUS_ORDER = ['Booked', 'CheckedIn', 'InService', 'Completed', 'Cancelled', 'NoShow'];
+
+/** Puts overlapping bookings of one stylist side by side instead of on top of each other. */
+function lanes(list: Appt[]) {
+  const sorted = [...list].sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime) || toMinutes(a.endTime) - toMinutes(b.endTime));
+  const out = new Map<string, { lane: number; of: number }>();
+  let group: { a: Appt; lane: number }[] = [];
+  let groupEnd = -1;
+  const flush = () => { const of = Math.max(1, ...group.map((g) => g.lane + 1)); group.forEach((g) => out.set(g.a.id, { lane: g.lane, of })); group = []; };
+  for (const a of sorted) {
+    if (group.length && toMinutes(a.startTime) >= groupEnd) { flush(); groupEnd = -1; }
+    const busy = new Set(group.filter((g) => toMinutes(g.a.endTime) > toMinutes(a.startTime)).map((g) => g.lane));
+    let lane = 0; while (busy.has(lane)) lane++;
+    group.push({ a, lane });
+    groupEnd = Math.max(groupEnd, toMinutes(a.endTime));
+  }
+  flush();
+  return out;
+}
 
 export type Draft = { customerId: string; staffId: string; date: string; startTime: string; serviceIds: string[]; branchId: string; walkIn: boolean; notes: string };
 
@@ -86,6 +106,13 @@ export function Planner(p: Props) {
         </div>
       </div>
 
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-ink-soft">
+        {STATUS_ORDER.map((st) => {
+          const n = p.appointments.filter((a) => a.status === st).length;
+          return <span key={st} className="inline-flex items-center gap-1.5"><span className={cx('h-2.5 w-2.5 rounded-full', DOT[st])} />{apptLabel(st)}<b className="text-ink">{n}</b></span>;
+        })}
+      </div>
+
       {p.staff.length === 0 ? (
         <Card><Empty title="No stylists set up">Add your team on the Staff page before booking.</Empty></Card>
       ) : p.view === 'day' ? (
@@ -119,7 +146,7 @@ function DayGrid({ date, appointments, staff, hours, onOpen, onSlot }: Props & {
 
   return (
     <div className="card overflow-x-auto">
-      <div className="flex" style={{ minWidth: 64 + staff.length * 170 }}>
+      <div className="flex" style={{ minWidth: 64 + staff.length * 220 }}>
         <div className="w-16 shrink-0 border-r border-line">
           <div className="h-12 border-b border-line" />
           <div className="relative" style={{ height }}>
@@ -133,8 +160,9 @@ function DayGrid({ date, appointments, staff, hours, onOpen, onSlot }: Props & {
         {staff.map((s) => {
           const works = s.workDays.split(',').map(Number).includes(dow);
           const list = appointments.filter((a) => a.staffId === s.id);
+          const layout = lanes(list);
           return (
-            <div key={s.id} className="min-w-[170px] flex-1 border-r border-line last:border-r-0">
+            <div key={s.id} className="min-w-[220px] flex-1 border-r border-line last:border-r-0">
               <div className="flex h-12 flex-col justify-center border-b border-line px-3">
                 <div className="truncate text-[13px] font-semibold">{s.name}</div>
                 <div className="truncate text-[11.5px] text-ink-mute">{works ? `${fmtTime(s.startTime)} – ${fmtTime(s.endTime)}` : 'Day off'}</div>
@@ -155,13 +183,20 @@ function DayGrid({ date, appointments, staff, hours, onOpen, onSlot }: Props & {
                 </>}
                 {list.map((a) => {
                   const top = (toMinutes(a.startTime) - open) * PX_PER_MIN;
-                  const h = Math.max(24, (toMinutes(a.endTime) - toMinutes(a.startTime)) * PX_PER_MIN - 2);
+                  const h = Math.max(30, (toMinutes(a.endTime) - toMinutes(a.startTime)) * PX_PER_MIN - 2);
+                  const l = layout.get(a.id) ?? { lane: 0, of: 1 };
+                  const dead = a.status === 'Cancelled' || a.status === 'NoShow';
                   return (
                     <button key={a.id} type="button" onClick={() => onOpen(a)}
-                      className={cx('absolute inset-x-1 overflow-hidden rounded-md border px-2 py-1 text-left text-[12px] leading-tight shadow-sm hover:z-10 hover:shadow', BLOCK[a.status])}
-                      style={{ top, height: h }}>
-                      <div className="truncate font-semibold">{a.customer.name}</div>
-                      {h > 34 && <div className="truncate opacity-80">{fmtTime(a.startTime)} · {a.services.map((x) => x.name).join(', ')}</div>}
+                      className={cx('absolute overflow-hidden rounded-md border border-l-4 px-2 py-1 text-left text-[12.5px] leading-snug shadow-sm hover:z-20 hover:shadow-md', BLOCK[a.status], dead && 'opacity-80')}
+                      style={{ top, height: h, left: `calc(${(l.lane / l.of) * 100}% + 4px)`, width: `calc(${100 / l.of}% - 8px)` }}>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="truncate text-[13px] font-semibold">{a.customer.name}</span>
+                        {h > 44 && <span className="shrink-0 rounded bg-white/70 px-1 text-[10.5px] font-semibold no-underline">{apptLabel(a.status)}</span>}
+                      </div>
+                      {h > 40 && <div className="truncate font-medium opacity-90">{fmtTime(a.startTime)} – {fmtTime(a.endTime)}</div>}
+                      {h > 56 && <div className="truncate opacity-90">{a.services.map((x) => x.name).join(', ')}</div>}
+                      {h > 72 && <div className="truncate opacity-75">{a.customer.phone}{a.walkIn ? ' · Walk-in' : ''}</div>}
                     </button>
                   );
                 })}
@@ -170,7 +205,7 @@ function DayGrid({ date, appointments, staff, hours, onOpen, onSlot }: Props & {
           );
         })}
       </div>
-      <p className="border-t border-line px-4 py-2 text-[12px] text-ink-mute">Click an empty time in a stylist&apos;s column to book that slot. Click a booking to update it.</p>
+      <p className="border-t border-line px-4 py-2 text-[12px] text-ink-mute">Click an empty time in a stylist&apos;s column to book that slot. Click a booking to see the client, services and update its status.</p>
     </div>
   );
 }
