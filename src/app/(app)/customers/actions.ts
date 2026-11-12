@@ -23,10 +23,16 @@ const schema = z.object({
 });
 export type CustomerInput = z.input<typeof schema>;
 
+/** Compares mobile numbers by their last 10 digits, ignoring spaces, dashes and +91. */
+const sameNumber = (a: string, b: string) => a.replace(/\D/g, '').slice(-10) === b.replace(/\D/g, '').slice(-10);
+
 export async function saveCustomer(input: CustomerInput) {
   return attempt(async () => {
     await requireEdit('customers');
     const { id, ...data } = schema.parse(input);
+    // The same number written differently (+91 98765 43210 and 9876543210) is still the same client.
+    const clash = (await db.customer.findMany({ select: { id: true, name: true, phone: true } })).find((o) => o.id !== id && sameNumber(o.phone, data.phone));
+    if (clash) throw new ActionError(`This mobile number already belongs to ${clash.name}.`);
     const c = id ? await db.customer.update({ where: { id }, data }) : await db.customer.create({ data });
     revalidatePath('/customers');
     return { id: c.id, name: c.name, phone: c.phone };
@@ -66,6 +72,7 @@ export async function importCustomers(csv: string) {
     const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? '').trim().replace(/^'/, '') : '');
     const res: ImportResult = { added: 0, updated: 0, errors: [] };
     const seen = new Set<string>();
+    const everyone = await db.customer.findMany({ select: { id: true, phone: true } });
 
     for (let n = 1; n < rows.length; n++) {
       const r = rows[n];
@@ -81,16 +88,19 @@ export async function importCustomers(csv: string) {
       const parsed = importSchema.safeParse({ name: get(r, idx.name), phone: get(r, idx.phone), email: get(r, idx.email), gender, notes: get(r, idx.notes), branchId, preferredStaffId: staffId });
       if (!parsed.success) { const i = parsed.error.issues[0]; res.errors.push(`Row ${line}: ${i.path.join(' ') || 'row'} ${i.message}`); continue; }
       const { id: _id, ...data } = parsed.data;
-      if (seen.has(data.phone)) { res.errors.push(`Row ${line}: mobile ${data.phone} appears twice in the file`); continue; }
-      seen.add(data.phone);
-      const existing = await db.customer.findUnique({ where: { phone: data.phone } });
+      const key = data.phone.replace(/\D/g, '').slice(-10);
+      if (seen.has(key)) { res.errors.push(`Row ${line}: mobile ${data.phone} appears twice in the file`); continue; }
+      seen.add(key);
+      // Same mobile number as a saved client: update that client. A new number: add a new client.
+      const existing = everyone.find((o) => sameNumber(o.phone, data.phone));
       if (existing) {
         // Only fill in what the file provides, so blank cells never wipe saved details.
-        const patch = Object.fromEntries(Object.entries(data).filter(([k, val]) => k === 'name' || (val !== null && val !== undefined && val !== '')));
+        const patch = Object.fromEntries(Object.entries(data).filter(([k, val]) => k !== 'phone' && (k === 'name' || (val !== null && val !== undefined && val !== ''))));
         await db.customer.update({ where: { id: existing.id }, data: { ...patch, active: true } });
         res.updated++;
       } else {
-        await db.customer.create({ data });
+        const made = await db.customer.create({ data });
+        everyone.push({ id: made.id, phone: made.phone });
         res.added++;
       }
     }
