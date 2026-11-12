@@ -20,7 +20,7 @@ export function BulkButtons({ downloadHref, canEdit }: { downloadHref: string; c
       {canEdit && <Button variant="secondary" onClick={() => setOpen(true)}><Upload size={15} />Bulk upload</Button>}
       <Modal open={open} onClose={close} title="Bulk upload clients">
         <div className="space-y-4">
-          <p className="text-ink-soft">Upload a CSV with the columns <b>Name, Mobile, Email, Gender, Branch, Preferred stylist, Notes</b>. Name, Mobile and Gender are required. A mobile number that already exists updates that client instead of adding a new one.</p>
+          <p className="text-ink-soft">Upload a CSV with the columns <b>Name, Mobile, Email, Gender, Branch, Preferred stylist, Notes</b>. Only Name and Mobile are required; everything else can be left blank. A mobile number that already exists updates that client instead of adding a new one.</p>
           <a href="/customers/export?template=1" className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-violet-600 hover:underline"><Download size={14} />Download the template</a>
           <input type="file" accept=".csv,text/csv" aria-label="CSV file" className="block w-full text-[13.5px] file:mr-3 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-2"
             onChange={async (e) => {

@@ -41,6 +41,9 @@ export async function archiveCustomer(id: string) {
   });
 }
 
+// Bulk upload only needs a name and a mobile number; gender can be left blank.
+const importSchema = schema.extend({ gender: z.string().nullish().transform((g) => g || null) });
+
 export type ImportResult = { added: number; updated: number; errors: string[] };
 
 /**
@@ -68,14 +71,14 @@ export async function importCustomers(csv: string) {
       const r = rows[n];
       const line = n + 1;
       const g = get(r, idx.gender).toLowerCase();
-      const gender = g.startsWith('f') ? 'Female' : g.startsWith('m') ? 'Male' : g ? 'Other' : '';
+      const gender = g.startsWith('f') ? 'Female' : g.startsWith('m') ? 'Male' : g ? 'Other' : null;
       const branchText = get(r, idx.branch);
       const stylistText = get(r, idx.stylist);
       const branchId = branchText ? byName(branches, branchText) : undefined;
       const staffId = stylistText ? byName(staff, stylistText) : undefined;
       if (branchText && !branchId) { res.errors.push(`Row ${line}: branch "${branchText}" does not exist`); continue; }
       if (stylistText && !staffId) { res.errors.push(`Row ${line}: stylist "${stylistText}" does not exist`); continue; }
-      const parsed = schema.safeParse({ name: get(r, idx.name), phone: get(r, idx.phone), email: get(r, idx.email), gender, notes: get(r, idx.notes), branchId, preferredStaffId: staffId });
+      const parsed = importSchema.safeParse({ name: get(r, idx.name), phone: get(r, idx.phone), email: get(r, idx.email), gender, notes: get(r, idx.notes), branchId, preferredStaffId: staffId });
       if (!parsed.success) { const i = parsed.error.issues[0]; res.errors.push(`Row ${line}: ${i.path.join(' ') || 'row'} ${i.message}`); continue; }
       const { id: _id, ...data } = parsed.data;
       if (seen.has(data.phone)) { res.errors.push(`Row ${line}: mobile ${data.phone} appears twice in the file`); continue; }
@@ -83,7 +86,7 @@ export async function importCustomers(csv: string) {
       const existing = await db.customer.findUnique({ where: { phone: data.phone } });
       if (existing) {
         // Only fill in what the file provides, so blank cells never wipe saved details.
-        const patch = Object.fromEntries(Object.entries(data).filter(([k, val]) => k === 'name' || k === 'gender' || (val !== null && val !== undefined && val !== '')));
+        const patch = Object.fromEntries(Object.entries(data).filter(([k, val]) => k === 'name' || (val !== null && val !== undefined && val !== '')));
         await db.customer.update({ where: { id: existing.id }, data: { ...patch, active: true } });
         res.updated++;
       } else {
