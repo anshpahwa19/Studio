@@ -47,6 +47,24 @@ export async function saveBranch(input: z.input<typeof branchSchema>) {
   });
 }
 
+/** Deletes a branch that has no history. A branch with bookings, bills or expenses should be marked Closed instead. */
+export async function deleteBranch(id: string) {
+  return attempt(async () => {
+    await requireEdit('settings');
+    const [appts, bills, expenses] = await Promise.all([
+      db.appointment.count({ where: { branchId: id } }),
+      db.invoice.count({ where: { branchId: id } }),
+      db.expense.count({ where: { branchId: id } }),
+    ]);
+    if (appts || bills || expenses) {
+      const parts = [appts && `${appts} appointment${appts > 1 ? 's' : ''}`, bills && `${bills} bill${bills > 1 ? 's' : ''}`, expenses && `${expenses} expense${expenses > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+      throw new ActionError(`This branch has ${parts} on record, so it cannot be deleted. Edit it and untick Open to hide it instead.`);
+    }
+    await db.branch.delete({ where: { id } });
+    revalidatePath('/settings');
+  });
+}
+
 const userSchema = z.object({
   id: z.string().optional(),
   name: v.required(80),
@@ -67,6 +85,20 @@ export async function saveUser(input: z.input<typeof userSchema>) {
       if (!password) throw new ActionError('Set a password for the new login.');
       await db.user.create({ data: { ...data, passwordHash: await bcrypt.hash(password, 10) } });
     }
+    revalidatePath('/settings');
+  });
+}
+
+export async function deleteUser(id: string) {
+  return attempt(async () => {
+    const me = await requireEdit('settings');
+    if (id === me.id) throw new ActionError('You cannot delete your own login.');
+    const target = await db.user.findUnique({ where: { id } });
+    if (!target) throw new ActionError('That login no longer exists.');
+    if (target.role === 'Owner' && target.active && (await db.user.count({ where: { role: 'Owner', active: true, id: { not: id } } })) === 0) {
+      throw new ActionError('There must be at least one active owner login.');
+    }
+    await db.user.delete({ where: { id } });
     revalidatePath('/settings');
   });
 }

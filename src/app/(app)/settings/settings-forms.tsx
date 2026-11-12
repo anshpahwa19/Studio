@@ -5,7 +5,7 @@ import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { ROLES } from '@/lib/roles';
 import { GST_RATES } from '@/lib/validate';
-import { saveBranch, saveSettings, saveUser, type SettingsInput } from './actions';
+import { deleteBranch, deleteUser, saveBranch, saveSettings, saveUser, type SettingsInput } from './actions';
 
 type Branch = { id: string; name: string; address: string; active: boolean };
 type User = { id: string; name: string; email: string; role: string; active: boolean };
@@ -22,6 +22,7 @@ export function SettingsForms({ settings, branches, users, meId }: { settings: S
   const [s, setS] = useState<SettingsInput>(settings);
   const [branch, setBranch] = useState<Partial<Branch> | null>(null);
   const [user, setUser] = useState<UserDraft | null>(null);
+  const [removing, setRemoving] = useState<{ kind: 'branch' | 'login'; id: string; name: string } | null>(null);
   const { run, pending } = useAction();
   const set = (k: keyof SettingsInput) => (e: { target: { value: string } }) => setS({ ...s, [k]: e.target.value });
 
@@ -78,7 +79,10 @@ export function SettingsForms({ settings, branches, users, meId }: { settings: S
             <Field label="Branch name"><Input value={branch.name ?? ''} onChange={(e) => setBranch({ ...branch, name: e.target.value })} required /></Field>
             <Field label="Address"><Input value={branch.address ?? ''} onChange={(e) => setBranch({ ...branch, address: e.target.value })} /></Field>
             {branch.id && <label className="flex items-center gap-2"><input type="checkbox" checked={branch.active ?? true} onChange={(e) => setBranch({ ...branch, active: e.target.checked })} className="h-4 w-4 accent-plum-600" />Open (shown when booking and billing)</label>}
-            <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setBranch(null)}>Cancel</Button><Button type="submit" disabled={pending}>Save branch</Button></div>
+            <div className="flex justify-between gap-2">
+              {branch.id ? <Button variant="danger" onClick={() => { setRemoving({ kind: 'branch', id: branch.id!, name: branch.name ?? '' }); setBranch(null); }}>Delete</Button> : <span />}
+              <div className="flex gap-2"><Button variant="secondary" onClick={() => setBranch(null)}>Cancel</Button><Button type="submit" disabled={pending}>Save branch</Button></div>
+            </div>
           </form>
         )}
       </Modal>
@@ -95,9 +99,27 @@ export function SettingsForms({ settings, branches, users, meId }: { settings: S
               <Input type="password" autoComplete="new-password" value={user.password} onChange={(e) => setUser({ ...user, password: e.target.value })} required={!user.id} />
             </Field>
             {user.id && <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={user.active} onChange={(e) => setUser({ ...user, active: e.target.checked })} className="h-4 w-4 accent-plum-600" />Can sign in</label>}
-            <div className="col-span-2 flex justify-end gap-2"><Button variant="secondary" onClick={() => setUser(null)}>Cancel</Button><Button type="submit" disabled={pending}>Save login</Button></div>
+            <div className="col-span-2 flex justify-between gap-2">
+              {user.id && user.id !== meId ? <Button variant="danger" onClick={() => { setRemoving({ kind: 'login', id: user.id!, name: user.name }); setUser(null); }}>Delete</Button> : <span />}
+              <div className="flex gap-2"><Button variant="secondary" onClick={() => setUser(null)}>Cancel</Button><Button type="submit" disabled={pending}>Save login</Button></div>
+            </div>
           </form>
         )}
+      </Modal>
+
+      <Modal open={!!removing} onClose={() => setRemoving(null)} title={removing?.kind === 'branch' ? 'Delete this branch?' : 'Delete this login?'}>
+        <p className="text-ink-soft">
+          {removing?.kind === 'branch'
+            ? <>{removing.name} will be removed. This only works for a branch with no appointments, bills or expenses; otherwise mark it as not Open instead.</>
+            : <>{removing?.name} will no longer be able to sign in, and the login is removed for good. To keep it but block access, untick "Can sign in" instead.</>}
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setRemoving(null)}>Keep</Button>
+          <Button variant="danger" disabled={pending} onClick={async () => {
+            const r = removing!;
+            if ((await run(() => (r.kind === 'branch' ? deleteBranch(r.id) : deleteUser(r.id)), r.kind === 'branch' ? 'Branch deleted' : 'Login deleted')) !== false) setRemoving(null);
+          }}>Delete</Button>
+        </div>
       </Modal>
     </div>
   );
