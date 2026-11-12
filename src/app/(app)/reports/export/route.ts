@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   return new Response('﻿' + csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${sp.type === 'expenses' ? 'expenses' : 'bills'}-${from}-to-${to}.csv"`,
+      'Content-Disposition': `attachment; filename="${sp.type === 'expenses' ? 'expenses' : 'sales'}-${from}-to-${to}.csv"`,
     },
   });
 }

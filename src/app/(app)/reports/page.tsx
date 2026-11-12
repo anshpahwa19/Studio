@@ -75,7 +75,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
         subtitle={`${fmtDate(from)} to ${fmtDate(to)} · ${branchName ?? 'All branches combined'}`}
         actions={
           <>
-            <a href={`/reports/export?type=invoices&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export bills (CSV)</a>
+            <a href={`/reports/export?type=invoices&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export sales (CSV)</a>
             <a href={`/reports/export?type=expenses&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export expenses (CSV)</a>
           </>
         }
@@ -95,7 +95,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Sales before GST" value={money0(net)} note={`${plural(invoices.length, 'bill')} · ${money0(discounts)} discounts given`} />
+        <Stat label="Sales before GST" value={money0(net)} note={`${plural(invoices.length, 'sale')} · ${money0(discounts)} discounts given`} />
         <Stat label="Expenses" value={money0(spent)} note={plural(expenses.length, 'entry', 'entries')} />
         <Stat label="Profit" value={money0(net - spent)} note="Sales before GST minus expenses" tone={net - spent < 0 ? 'warn' : 'good'} />
         <Stat label="Collected" value={money0(collected)} note={`GST billed ${money0(tax)} · Dues ${money0(dues)}`} />
@@ -105,7 +105,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
         <Card title="By branch" subtitle="Each branch for this period, with the combined total at the bottom" pad={false} className="mb-6">
           <div className="overflow-x-auto">
             <table className="table">
-              <thead><tr><th>Branch</th><th className="text-right">Bills</th><th className="text-right">Sales before GST</th><th className="text-right">Expenses</th><th className="text-right">Profit</th><th className="text-right">Collected</th></tr></thead>
+              <thead><tr><th>Branch</th><th className="text-right">Sales</th><th className="text-right">Sales before GST</th><th className="text-right">Expenses</th><th className="text-right">Profit</th><th className="text-right">Collected</th></tr></thead>
               <tbody>
                 {compare.map((r) => (
                   <tr key={r.id ?? 'none'} className="hover:bg-canvas/60">
