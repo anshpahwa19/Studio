@@ -5,7 +5,7 @@ export type Role = (typeof ROLES)[number];
 
 export type Area =
   | 'dashboard' | 'appointments' | 'billing' | 'customers' | 'services'
-  | 'staff' | 'inventory' | 'expenses' | 'reports' | 'settings';
+  | 'staff' | 'attendance' | 'inventory' | 'expenses' | 'reports' | 'settings';
 
 const VIEW: Record<Area, Role[]> = {
   dashboard: ['Owner', 'Manager', 'Receptionist', 'Stylist'],
@@ -14,6 +14,7 @@ const VIEW: Record<Area, Role[]> = {
   billing: ['Owner', 'Manager', 'Receptionist'],
   services: ['Owner', 'Manager', 'Receptionist'],
   staff: ['Owner', 'Manager'],
+  attendance: ['Owner', 'Manager', 'Receptionist'],
   inventory: ['Owner', 'Manager', 'Receptionist'],
   expenses: ['Owner', 'Manager'],
   reports: ['Owner', 'Manager'],

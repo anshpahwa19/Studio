@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  BarChart3, Bell, CalendarDays, CalendarPlus, ChevronDown, ChevronLeft, LayoutDashboard, LogOut, Menu, Package, Plus,
+  BarChart3, Bell, CalendarCheck, CalendarDays, CalendarPlus, ChevronDown, ChevronLeft, LayoutDashboard, LogOut, Menu, Package, Plus,
   Receipt, Scissors, Search, Settings, UserCheck, UserPlus, Users, Wallet, X,
 } from 'lucide-react';
 import { SignOutDialog } from './sign-out';
@@ -14,7 +14,7 @@ type Alert = { href: string; text: string; tone: 'amber' | 'red' | 'violet' };
 
 const ICONS: Record<string, typeof Bell> = {
   '/dashboard': LayoutDashboard, '/appointments': CalendarDays, '/billing': Receipt, '/customers': Users, '/services': Scissors,
-  '/staff': UserCheck, '/inventory': Package, '/expenses': Wallet, '/reports': BarChart3, '/settings': Settings,
+  '/staff': UserCheck, '/attendance': CalendarCheck, '/inventory': Package, '/expenses': Wallet, '/reports': BarChart3, '/settings': Settings,
 };
 
 // Title and subtitle shown in the top bar for each section.
@@ -25,6 +25,7 @@ const TITLES: [string, string, string][] = [
   ['/customers', 'Customer Relationship Management', 'Client profiles & styling notes'],
   ['/services', 'Services & Pricing', 'Treatment menu, prices & durations'],
   ['/staff', 'Staff Management', 'Team, working hours & commission'],
+  ['/attendance', 'Staff Attendance', 'Daily check-in & monthly summary'],
   ['/inventory', 'Inventory & Stock', 'Products, stock levels & reorders'],
   ['/expenses', 'Business Expenses', 'Daily costs & vendor payments'],
   ['/reports', 'Reports & Analytics', 'Profit & loss, performance & exports'],

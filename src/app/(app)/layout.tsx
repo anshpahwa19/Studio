@@ -14,6 +14,7 @@ const NAV: { href: string; label: string; area: Area }[] = [
   { href: '/customers', label: 'Customers (CRM)', area: 'customers' },
   { href: '/services', label: 'Services & Pricing', area: 'services' },
   { href: '/staff', label: 'Staff Management', area: 'staff' },
+  { href: '/attendance', label: 'Staff Attendance', area: 'attendance' },
   { href: '/inventory', label: 'Inventory & Stock', area: 'inventory' },
   { href: '/expenses', label: 'Expenses', area: 'expenses' },
   { href: '/reports', label: 'Reports & Analytics', area: 'reports' },

@@ -25,6 +25,7 @@ async function wipe() {
   await db.service.deleteMany();
   await db.serviceCategory.deleteMany();
   await db.customer.deleteMany();
+  await db.attendance.deleteMany();
   await db.staff.deleteMany();
   await db.branch.deleteMany();
   await db.user.deleteMany();
