@@ -66,9 +66,8 @@ export function Shell({ items, salon, user, alerts, canBill, canStock, children 
         )}
       >
         <div className={cx('flex h-[72px] items-center gap-3 border-b border-line px-5', collapsed && 'lg:justify-center lg:px-0')}>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-sm">
-            <Scissors size={19} />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Shruti Pahwa Luxury Salon logo" width={40} height={40} className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-sm" />
           <div className={cx('min-w-0 flex-1', collapsed && 'lg:hidden')}>
             <div className="truncate text-[15px] font-bold text-ink">{first} {rest.slice(0, 1).join(' ')}</div>
             <div className="truncate text-[11px] font-bold uppercase tracking-[0.08em] text-violet-600">{rest.slice(1).join(' ') || 'Salon'}</div>

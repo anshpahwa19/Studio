@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { CalendarDays, Receipt, Scissors, Users } from 'lucide-react';
+import { CalendarDays, Receipt, Users } from 'lucide-react';
 import { currentUser } from '@/lib/session';
 import { db } from '@/lib/db';
 import { LoginForm } from './login-form';
@@ -18,7 +18,8 @@ export default async function LoginPage() {
     <main className="grid min-h-screen bg-canvas lg:grid-cols-[1.1fr_1fr]">
       <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-violet-600 via-violet-700 to-violet-900 p-12 text-white lg:flex">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25"><Scissors size={21} /></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Shruti Pahwa Luxury Salon logo" width={48} height={48} className="h-12 w-12 rounded-xl object-cover ring-1 ring-white/25" />
           <span className="text-[13px] font-bold uppercase tracking-[0.14em] text-violet-100">Salon Management</span>
         </div>
         <div>
@@ -37,7 +38,8 @@ export default async function LoginPage() {
       </div>
       <div className="flex items-center justify-center p-6">
         <div className="card w-full max-w-md p-8 sm:p-10">
-          <span className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 text-white lg:hidden"><Scissors size={22} /></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Shruti Pahwa Luxury Salon logo" width={56} height={56} className="mb-6 h-14 w-14 rounded-xl object-cover lg:hidden" />
           <h2 className="text-[26px] font-bold tracking-tight">Welcome back</h2>
           <p className="mb-7 mt-1 text-ink-soft">Sign in with the login the salon owner gave you.</p>
           <LoginForm />
