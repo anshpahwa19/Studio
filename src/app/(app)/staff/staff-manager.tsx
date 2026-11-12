@@ -81,7 +81,7 @@ export function StaffManager({ staff }: { staff: Member[] }) {
             </fieldset>
             {f.payType === 'Commission'
               ? <Field label="Commission (%)" hint="Share of the revenue from services they perform" className="col-span-2"><Input id="st-comm" type="number" min="0" max="100" step="0.5" value={f.commissionRate} onChange={(e) => setF({ ...f, commissionRate: e.target.value as unknown as number })} /></Field>
-              : <Field label="Monthly salary (₹)" className="col-span-2"><Input id="st-salary" type="number" min="1" step="100" value={f.monthlySalary || ''} onChange={(e) => setF({ ...f, monthlySalary: e.target.value as unknown as number })} required /></Field>}
+              : <Field label="Monthly salary (₹)" className="col-span-2"><Input id="st-salary" type="number" min="1" step="1" value={f.monthlySalary || ''} onChange={(e) => setF({ ...f, monthlySalary: e.target.value as unknown as number })} required /></Field>}
             <Field label="Skills" hint="Separate with commas" className="col-span-2"><Input id="st-skills" value={f.skills} onChange={(e) => setF({ ...f, skills: e.target.value })} placeholder="Balayage, Keratin, Nail art" /></Field>
             <fieldset className="col-span-2">
               <legend className="label">Working days</legend>
