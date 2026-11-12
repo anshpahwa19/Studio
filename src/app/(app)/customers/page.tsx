@@ -6,9 +6,10 @@ import { fmtDate, money0, plural } from '@/lib/format';
 import { Badge, Card, Empty, Input, PageHeader } from '@/components/ui';
 import { NewCustomerButton } from './customer-buttons';
 import { BulkButtons } from './bulk-buttons';
+import { SortHead } from './sort-head';
 import { BranchFilter } from './branch-filter';
 
-export default async function CustomersPage({ searchParams }: { searchParams: { q?: string; new?: string; branch?: string } }) {
+export default async function CustomersPage({ searchParams }: { searchParams: { q?: string; new?: string; branch?: string; sort?: string; dir?: string } }) {
   const user = await requirePage('customers');
   const q = searchParams.q?.trim() ?? '';
   const branches = await db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
@@ -43,15 +44,42 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
   const spendMap = new Map(spend.map((s) => [s.customerId, s._sum]));
   const visitMap = new Map(visits.map((s) => [s.customerId, s]));
 
+  const FIELDS = ['name', 'stylist', 'branches', 'visits', 'last', 'billed', 'due'];
+  const sort = FIELDS.includes(searchParams.sort ?? '') ? searchParams.sort! : 'name';
+  const dir: 'asc' | 'desc' = searchParams.dir === 'desc' ? 'desc' : 'asc';
+  const keyOf = (c: (typeof customers)[number]): string | number => {
+    const s = spendMap.get(c.id);
+    switch (sort) {
+      case 'stylist': return (c.preferredStaff?.name ?? '').toLowerCase();
+      case 'branches': return [...(visited.get(c.id) ?? [])].sort().join(', ').toLowerCase();
+      case 'visits': return visitMap.get(c.id)?._count ?? 0;
+      case 'last': return visitMap.get(c.id)?._max.date ?? '';
+      case 'billed': return s?.total ?? 0;
+      case 'due': return (s?.total ?? 0) - (s?.paid ?? 0);
+      default: return c.name.toLowerCase();
+    }
+  };
+  // Empty values (no stylist, no visit yet) always go to the bottom, whichever way the column is sorted.
+  const empty = (k: string | number) => k === '' ;
+  const sorted = [...customers].sort((a, b) => {
+    const ka = keyOf(a), kb = keyOf(b);
+    if (empty(ka) !== empty(kb)) return empty(ka) ? 1 : -1;
+    const r = typeof ka === 'number' && typeof kb === 'number' ? ka - kb : String(ka).localeCompare(String(kb));
+    return (dir === 'asc' ? r : -r) || a.name.localeCompare(b.name);
+  });
+  const keep: Record<string, string> = { ...(q && { q }), ...(branch && { branch }) };
+
   return (
     <>
       <PageHeader title="Customers (CRM)" subtitle={`${plural(customers.length, q ? 'matching client' : 'active client')} · profiles, visit history and styling notes`} actions={canEdit(user.role, 'customers') && <NewCustomerButton staff={staff} branches={branches} autoOpen={searchParams.new === '1'} />} />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <form className="w-full max-w-md">
           {branch && <input type="hidden" name="branch" value={branch} />}
+          {searchParams.sort && <input type="hidden" name="sort" value={sort} />}
+          {searchParams.sort && <input type="hidden" name="dir" value={dir} />}
           <Input id="q" name="q" defaultValue={q} placeholder="Search by name, mobile or email" aria-label="Search clients" />
         </form>
-        {branches.length > 0 && <BranchFilter branches={branches} value={branch} q={q} />}
+        {branches.length > 0 && <BranchFilter branches={branches} value={branch} q={q} sort={searchParams.sort ? sort : ''} dir={dir} />}
         <div className="ml-auto flex gap-2"><BulkButtons canEdit={canEdit(user.role, 'customers')} downloadHref={`/customers/export?${new URLSearchParams({ ...(q && { q }), ...(branch && { branch }) })}`} /></div>
       </div>
       <Card pad={false}>
@@ -60,9 +88,17 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
         ) : (
           <div className="overflow-x-auto">
             <table className="table">
-              <thead><tr><th>Client</th><th>Preferred stylist</th><th>Branches visited</th><th className="text-right">Visits</th><th>Last visit</th><th className="text-right">Billed</th><th className="text-right">Due</th></tr></thead>
+              <thead><tr>
+                <SortHead label="Client" field="name" sort={sort} dir={dir} params={keep} />
+                <SortHead label="Preferred stylist" field="stylist" sort={sort} dir={dir} params={keep} />
+                <SortHead label="Branches visited" field="branches" sort={sort} dir={dir} params={keep} />
+                <SortHead label="Visits" field="visits" sort={sort} dir={dir} params={keep} right />
+                <SortHead label="Last visit" field="last" sort={sort} dir={dir} params={keep} />
+                <SortHead label="Billed" field="billed" sort={sort} dir={dir} params={keep} right />
+                <SortHead label="Due" field="due" sort={sort} dir={dir} params={keep} right />
+              </tr></thead>
               <tbody>
-                {customers.map((c) => {
+                {sorted.map((c) => {
                   const s = spendMap.get(c.id);
                   const v = visitMap.get(c.id);
                   const due = (s?.total ?? 0) - (s?.paid ?? 0);
