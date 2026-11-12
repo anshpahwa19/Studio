@@ -1,10 +1,9 @@
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, CalendarCheck, CalendarDays, CalendarPlus, CheckCircle2, Clock, IndianRupee, Package, Receipt, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CalendarCheck, CalendarDays, CalendarPlus, CheckCircle2, Clock, IndianRupee, Package, Receipt, UserPlus, Users, Wallet } from 'lucide-react';
 import { db } from '@/lib/db';
 import { requirePage } from '@/lib/session';
 import { canView } from '@/lib/roles';
 import { addDays, fmtDate, fmtDateTime, fmtTime, isoDate, money0, monthStart, plural, toMinutes } from '@/lib/format';
-import { BarChart } from '@/components/bar-chart';
 import { ApptStatus, Card, Empty, IconTile, Pill, Stat, type IconTone } from '@/components/ui';
 import { SyncButton } from './sync-button';
 
@@ -37,7 +36,6 @@ export default async function Dashboard() {
 
   const byDay = new Map<string, number>();
   for (const p of payments14) byDay.set(isoDate(p.createdAt), (byDay.get(isoDate(p.createdAt)) ?? 0) + p.amount);
-  const chart = Array.from({ length: 14 }, (_, i) => addDays(from14, i)).map((d) => ({ label: fmtDate(d, { day: 'numeric', month: 'short' }), value: byDay.get(d) ?? 0 }));
   const live = appts.filter((a) => !['Cancelled', 'NoShow'].includes(a.status));
   const count = (s: string) => appts.filter((a) => a.status === s).length;
   const outstanding = dues ? (dues._sum.total ?? 0) - (dues._sum.paid ?? 0) : 0;
@@ -59,8 +57,6 @@ export default async function Dashboard() {
     { href: '/customers?new=1', title: 'Add New Client', text: 'Client profile & styling notes', tag: 'CRM', tone: 'blue', icon: UserPlus, show: canView(user.role, 'customers') },
     { href: '/expenses?new=1', title: 'Record Expense', text: 'Supplies, rent & daily payouts', tag: 'Finance', tone: 'red', icon: Wallet, show: spend },
   ];
-  const statuses: [string, string, string][] = [['Booked', 'Booked', '#0ea5e9'], ['CheckedIn', 'Checked in', '#f59e0b'], ['InService', 'In service', '#8b5cf6'], ['Completed', 'Completed', '#10b981'], ['Cancelled', 'Cancelled', '#a8a29e'], ['NoShow', 'No-show', '#f43f5e']];
-  const maxStatus = Math.max(1, ...statuses.map(([s]) => count(s)));
 
   return (
     <>
@@ -121,28 +117,7 @@ export default async function Dashboard() {
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-[1.6fr_1fr]">
-        {money ? (
-          <Card title="Revenue Overview (14 Days)" subtitle="Daily collected revenue from POS checkout & payments"
-            actions={<span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200"><TrendingUp size={15} />Live Trends</span>}>
-            <BarChart data={chart} height={200} />
-          </Card>
-        ) : <TodaySchedule appts={appts} />}
-        <Card title="Appointment Status (Today)" subtitle="Current lifecycle distribution">
-          {appts.length === 0 ? <Empty title="No appointments today" /> : (
-            <ul className="space-y-4">
-              {statuses.map(([s, label, color]) => (
-                <li key={s}>
-                  <div className="flex justify-between text-[14px]"><span className="font-medium text-ink-soft">{label}</span><span className="tabular font-semibold">{count(s)}</span></div>
-                  <div className="mt-1.5 h-2.5 rounded-full bg-stone-100"><div className="h-2.5 rounded-full" style={{ width: `${(count(s) / maxStatus) * 100}%`, background: color }} /></div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-
-      {money && (
+      {money ? (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.6fr_1fr]">
           <TodaySchedule appts={appts} />
           <Card title="Latest Payments" subtitle="Live POS transaction stream" pad={false}>
@@ -161,7 +136,7 @@ export default async function Dashboard() {
             )}
           </Card>
         </div>
-      )}
+      ) : <TodaySchedule appts={appts} />}
     </>
   );
 }
