@@ -1,7 +1,8 @@
 // Salon Studio database. Money is stored in rupees, dates as "YYYY-MM-DD", times as "HH:mm".
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
 }
 
 datasource db {

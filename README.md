@@ -28,6 +28,17 @@ On first launch the app copies `prisma/dev.db` to `~/Library/Application Support
 and uses that copy from then on. **Back up that file** to keep your records safe.
 To ship an installer without demo data, run `npm run setup:fresh` before `npm run dist:mac`.
 
+### As a Linux or Windows app
+
+```bash
+npm run dist:linux        # AppImage and .deb installers in dist/ (x64)
+npm run dist:win          # Windows installer (.exe) in dist/ (x64)
+```
+
+Linux: run the AppImage (`chmod +x` it first) or install the `.deb` with `sudo apt install ./dist/salon-studio_*.deb`.
+Data is kept in `~/.config/Salon Studio/salon.db` on Linux and `%APPDATA%\Salon Studio\salon.db` on Windows.
+`dist:win` is best run on Windows (building it from Linux needs Wine).
+
 ### Database commands
 
 | Command | What it does |
