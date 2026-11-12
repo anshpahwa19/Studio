@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
-import { fmtDateTime, money } from '@/lib/format';
+import { fmtDateTime, isoDate, money } from '@/lib/format';
 import { archiveProduct, moveStock, saveProduct, stockHistory, type ProductInput } from './actions';
 
 type Product = { id: string; name: string; sku: string | null; category: string; supplier: string | null; costPrice: number; price: number; stock: number; reorderLevel: number; unit: string };
@@ -16,7 +16,7 @@ export function InventoryTable({ products }: { products: Product[] }) {
   const [q, setQ] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
   const [edit, setEdit] = useState<ProductInput | null>(null);
-  const [move, setMove] = useState<{ p: Product; type: 'IN' | 'OUT' | 'ADJUST'; qty: string; note: string } | null>(null);
+  const [move, setMove] = useState<{ p: Product; type: 'IN' | 'OUT' | 'ADJUST'; qty: string; note: string; date: string } | null>(null);
   const [history, setHistory] = useState<{ p: Product; rows: Move[] | null } | null>(null);
   const { run, pending } = useAction();
 
@@ -53,7 +53,7 @@ export function InventoryTable({ products }: { products: Product[] }) {
                       </td>
                       <td>
                         <div className="flex justify-end gap-1">
-                          <Button size="sm" variant="secondary" onClick={() => setMove({ p, type: 'IN', qty: '', note: '' })}>Stock</Button>
+                          <Button size="sm" variant="secondary" onClick={() => setMove({ p, type: 'IN', qty: '', note: '', date: isoDate() })}>Stock</Button>
                           <Button size="sm" variant="ghost" onClick={async () => { setHistory({ p, rows: null }); setHistory({ p, rows: await stockHistory(p.id) }); }}>History</Button>
                           <Button size="sm" variant="ghost" onClick={() => setEdit({ ...p })}>Edit</Button>
                         </div>
@@ -94,7 +94,7 @@ export function InventoryTable({ products }: { products: Product[] }) {
         {move && (
           <form className="space-y-4" onSubmit={async (e) => {
             e.preventDefault();
-            if ((await run(() => moveStock({ productId: move.p.id, type: move.type, qty: Number(move.qty), note: move.note }), 'Stock updated')) !== false) setMove(null);
+            if ((await run(() => moveStock({ productId: move.p.id, type: move.type, qty: Number(move.qty), note: move.note, date: move.date }), 'Stock updated')) !== false) setMove(null);
           }}>
             <p className="text-ink-soft">Currently {move.p.stock} {move.p.unit} in stock.</p>
             <div className="grid grid-cols-3 gap-1 rounded-lg border border-line p-1">
@@ -108,6 +108,7 @@ export function InventoryTable({ products }: { products: Product[] }) {
             <Field label={move.type === 'ADJUST' ? 'Actual count on the shelf' : 'Quantity'}>
               <Input type="number" min="0" value={move.qty} onChange={(e) => setMove({ ...move, qty: e.target.value })} required autoFocus />
             </Field>
+            <Field label={move.type === 'IN' ? 'Date received' : 'Date'}><Input type="date" max={isoDate()} value={move.date} onChange={(e) => setMove({ ...move, date: e.target.value })} required /></Field>
             <Field label="Note"><Input value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} placeholder={move.type === 'IN' ? 'Supplier bill number' : 'Used in salon, damaged, expired'} /></Field>
             <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setMove(null)}>Cancel</Button><Button type="submit" disabled={pending}>Update stock</Button></div>
           </form>
