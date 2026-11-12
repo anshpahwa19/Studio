@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button, Card, Empty, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
+import { SortTh, useSort } from '@/components/sort-button';
 import { useAction } from '@/components/use-action';
 import { fmtDate, isoDate, money } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
@@ -17,6 +18,9 @@ export function ExpenseList({ from, to, branch, allBranches, expenses, categorie
   const blank = (): ExpenseInput => ({ date: today >= from && today <= to ? today : to, category: 'General', description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch || branches[0]?.id || null });
   const [f, setF] = useState<ExpenseInput | null>(autoOpen ? blank() : null);
   const { run, pending } = useAction();
+  const { sort, dir, toggle, apply } = useSort<Expense>({
+    date: (e) => e.date, description: (e) => e.description.toLowerCase(), method: (e) => e.method.toLowerCase(), amount: (e) => e.amount,
+  }, 'date', 'desc');
   const go = (a: string, b: string, br: string) => router.push(`/expenses?from=${a}&to=${b}${br ? `&branch=${br}` : ''}`);
 
   return (
@@ -39,9 +43,15 @@ export function ExpenseList({ from, to, branch, allBranches, expenses, categorie
         {expenses.length === 0 ? <Empty title="No expenses in this period" /> : (
           <div className="overflow-x-auto">
             <table className="table">
-              <thead><tr><th>Date</th><th>Expense</th><th>Paid via</th><th className="text-right">Amount</th><th /></tr></thead>
+              <thead><tr>
+                <SortTh label="Date" field="date" sort={sort} dir={dir} onSort={toggle} />
+                <SortTh label="Expense" field="description" sort={sort} dir={dir} onSort={toggle} />
+                <SortTh label="Paid via" field="method" sort={sort} dir={dir} onSort={toggle} />
+                <SortTh label="Amount" field="amount" sort={sort} dir={dir} onSort={toggle} right />
+                <th />
+              </tr></thead>
               <tbody>
-                {expenses.map((e) => (
+                {apply(expenses).map((e) => (
                   <tr key={e.id} className="hover:bg-canvas/60">
                     <td className="whitespace-nowrap text-ink-soft">{fmtDate(e.date, { day: 'numeric', month: 'short' })}</td>
                     <td><div className="font-medium">{e.description}</div><div className="text-[12px] text-ink-mute">{[e.category, e.vendor, e.branch?.name].filter(Boolean).join(' · ')}</div></td>

@@ -6,7 +6,7 @@ import { fmtDate, money0, plural } from '@/lib/format';
 import { Badge, Card, Empty, Input, PageHeader } from '@/components/ui';
 import { NewCustomerButton } from './customer-buttons';
 import { BulkButtons } from './bulk-buttons';
-import { SortHead } from './sort-head';
+import { SortHead } from '@/components/sort-head';
 import { BranchFilter } from './branch-filter';
 
 export default async function CustomersPage({ searchParams }: { searchParams: { q?: string; new?: string; branch?: string; sort?: string; dir?: string } }) {
@@ -89,13 +89,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
           <div className="overflow-x-auto">
             <table className="table">
               <thead><tr>
-                <SortHead label="Client" field="name" sort={sort} dir={dir} params={keep} />
-                <SortHead label="Preferred stylist" field="stylist" sort={sort} dir={dir} params={keep} />
-                <SortHead label="Branches visited" field="branches" sort={sort} dir={dir} params={keep} />
-                <SortHead label="Visits" field="visits" sort={sort} dir={dir} params={keep} right />
-                <SortHead label="Last visit" field="last" sort={sort} dir={dir} params={keep} />
-                <SortHead label="Billed" field="billed" sort={sort} dir={dir} params={keep} right />
-                <SortHead label="Due" field="due" sort={sort} dir={dir} params={keep} right />
+                <SortHead base="/customers" label="Client" field="name" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/customers" label="Preferred stylist" field="stylist" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/customers" label="Branches visited" field="branches" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/customers" label="Visits" field="visits" sort={sort} dir={dir} params={keep} right />
+                <SortHead base="/customers" label="Last visit" field="last" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/customers" label="Billed" field="billed" sort={sort} dir={dir} params={keep} right />
+                <SortHead base="/customers" label="Due" field="due" sort={sort} dir={dir} params={keep} right />
               </tr></thead>
               <tbody>
                 {sorted.map((c) => {

@@ -3,9 +3,10 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requirePage } from '@/lib/session';
 import { fmtDate, money, money0, plural } from '@/lib/format';
+import { SortHead, readSort } from '@/components/sort-head';
 import { Card, Empty, Input, InvoiceStatus, PageHeader, Select, Stat } from '@/components/ui';
 
-type Search = { q?: string; status?: string; branch?: string; from?: string; to?: string };
+type Search = { q?: string; status?: string; branch?: string; from?: string; to?: string; sort?: string; dir?: string };
 
 export default async function BillingPage({ searchParams: s }: { searchParams: Search }) {
   await requirePage('billing');
@@ -18,12 +19,20 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
     where.OR = [{ number: { contains: q } }, { customer: { name: { contains: q } } }, { customer: { phone: { contains: q } } }];
   }
 
-  const [invoices, branches, totals, dues] = await Promise.all([
-    db.invoice.findMany({ where, orderBy: { createdAt: 'desc' }, take: 200, include: { customer: { select: { name: true, phone: true } }, branch: { select: { name: true } }, _count: { select: { items: true } } } }),
+  const { sort, dir } = readSort(s, ['number', 'client', 'date', 'branch', 'total', 'due', 'status'], 'date', 'desc');
+  const orderBy: Prisma.InvoiceOrderByWithRelationInput[] = [
+    sort === 'number' ? { number: dir } : sort === 'client' ? { customer: { name: dir } } : sort === 'branch' ? { branch: { name: dir } } : sort === 'total' ? { total: dir } : sort === 'status' ? { status: dir } : { createdAt: sort === 'date' ? dir : 'desc' },
+    { createdAt: 'desc' },
+  ];
+  const keep: Record<string, string> = Object.fromEntries(Object.entries({ q: s.q, status: s.status, branch: s.branch, from: s.from, to: s.to }).filter(([, v]) => v)) as Record<string, string>;
+  const [invoices0, branches, totals, dues] = await Promise.all([
+    db.invoice.findMany({ where, orderBy, take: 200, include: { customer: { select: { name: true, phone: true } }, branch: { select: { name: true } }, _count: { select: { items: true } } } }),
     db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
     db.invoice.aggregate({ where: { ...where, status: s.status ?? { not: 'Cancelled' } }, _sum: { total: true, paid: true }, _count: true }),
     db.invoice.aggregate({ where: { status: { in: ['Unpaid', 'Partial'] } }, _sum: { total: true, paid: true }, _count: true }),
   ]);
+  const dueOf = (i: { status: string; total: number; paid: number }) => (i.status === 'Cancelled' ? 0 : i.total - i.paid);
+  const invoices = sort === 'due' ? [...invoices0].sort((a, b) => (dir === 'asc' ? 1 : -1) * (dueOf(a) - dueOf(b))) : invoices0;
   const outstanding = (dues._sum.total ?? 0) - (dues._sum.paid ?? 0);
 
   return (
@@ -39,6 +48,8 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
         <Stat label="Outstanding dues" value={money0(outstanding)} note={`Across ${plural(dues._count, 'bill')}`} tone={outstanding > 0.5 ? 'warn' : undefined} />
       </div>
       <form className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto_auto_auto]">
+        {s.sort && <input type="hidden" name="sort" value={sort} />}
+        {s.sort && <input type="hidden" name="dir" value={dir} />}
         <Input name="q" defaultValue={s.q} placeholder="Bill number, client name or mobile" aria-label="Search bills" />
         <Select name="status" defaultValue={s.status ?? ''} aria-label="Status">
           <option value="">Any status</option><option value="Paid">Paid</option><option value="Partial">Part paid</option><option value="Unpaid">Unpaid</option><option value="Cancelled">Cancelled</option>
@@ -55,7 +66,15 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
         {invoices.length === 0 ? <Empty title="No bills match these filters" /> : (
           <div className="overflow-x-auto">
             <table className="table">
-              <thead><tr><th>Bill</th><th>Client</th><th>Date</th><th>Branch</th><th className="text-right">Total</th><th className="text-right">Due</th><th>Status</th></tr></thead>
+              <thead><tr>
+                <SortHead base="/billing" label="Bill" field="number" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/billing" label="Client" field="client" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/billing" label="Date" field="date" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/billing" label="Branch" field="branch" sort={sort} dir={dir} params={keep} />
+                <SortHead base="/billing" label="Total" field="total" sort={sort} dir={dir} params={keep} right />
+                <SortHead base="/billing" label="Due" field="due" sort={sort} dir={dir} params={keep} right />
+                <SortHead base="/billing" label="Status" field="status" sort={sort} dir={dir} params={keep} />
+              </tr></thead>
               <tbody>
                 {invoices.map((i) => (
                   <tr key={i.id} className="hover:bg-canvas/60">

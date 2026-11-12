@@ -5,6 +5,7 @@ import { Badge, Button, Card, Empty, Field, Input, Select } from '@/components/u
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { fmtDateTime, isoDate, money } from '@/lib/format';
+import { SortTh, useSort } from '@/components/sort-button';
 import { toast } from '@/components/toast';
 import { deleteProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from './actions';
 
@@ -27,7 +28,11 @@ export function InventoryTable({ products, suppliers, branches, branch, autoStoc
   const { run, pending } = useAction();
 
   const categories = [...new Set(products.map((p) => p.category))].sort();
-  const shown = products.filter((p) => (!lowOnly || p.stock <= p.reorderLevel) && `${p.name} ${p.sku ?? ''} ${p.category}`.toLowerCase().includes(q.toLowerCase()));
+  const { sort, dir, toggle, apply } = useSort<Product>({
+    name: (p) => p.name.toLowerCase(), category: (p) => p.category.toLowerCase(), cost: (p) => p.costPrice, price: (p) => p.price,
+    margin: (p) => (p.price > 0 ? (p.price - p.costPrice) / p.price : -1), stock: (p) => p.stock,
+  }, 'name');
+  const shown = apply(products.filter((p) => (!lowOnly || p.stock <= p.reorderLevel) && `${p.name} ${p.sku ?? ''} ${p.category}`.toLowerCase().includes(q.toLowerCase())));
 
   return (
     <>
@@ -42,7 +47,15 @@ export function InventoryTable({ products, suppliers, branches, branch, autoStoc
         {shown.length === 0 ? <Empty title={products.length ? 'No products match' : 'No products yet'} /> : (
           <div className="overflow-x-auto">
             <table className="table">
-              <thead><tr><th>Product</th><th>Category</th><th className="text-right">Cost</th><th className="text-right">Price</th><th className="text-right">Margin</th><th className="text-right">In stock</th><th /></tr></thead>
+              <thead><tr>
+                <SortTh label="Product" field="name" sort={sort} dir={dir} onSort={toggle} />
+                <SortTh label="Category" field="category" sort={sort} dir={dir} onSort={toggle} />
+                <SortTh label="Cost" field="cost" sort={sort} dir={dir} onSort={toggle} right />
+                <SortTh label="Price" field="price" sort={sort} dir={dir} onSort={toggle} right />
+                <SortTh label="Margin" field="margin" sort={sort} dir={dir} onSort={toggle} right />
+                <SortTh label="In stock" field="stock" sort={sort} dir={dir} onSort={toggle} right />
+                <th />
+              </tr></thead>
               <tbody>
                 {shown.map((p) => {
                   const low = p.stock <= p.reorderLevel;
