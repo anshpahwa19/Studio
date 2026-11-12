@@ -56,9 +56,9 @@ Viewers can only look. Its records are separate from the desktop app's database.
   Untick **Charge GST** to make a bill without GST. A new client can be added right on the bill screen.
   You can collect dues later and void a bill with a reason. Bills print or save as PDF from the bill page.
 - **Clients**: profiles with hair and nail notes, preferred stylist, visit history, total billed and balance due.
-- **Staff Attendance**: mark each person Present, Half day, On leave or Absent for a day (with optional check-in/out times and a note),
-  mark everyone scheduled as present in one click, and see a month grid with days worked and hours per person.
-  Owners, Managers and Receptionists can use it.
+- **Staff Attendance**: punch in and punch out times only. Press Punch in / Punch out to record the current time, or Edit times to
+  enter or correct them. A working day with no punch-in is Absent (today, once the shift is over). A month grid shows
+  days present, days absent and hours per person. Owners, Managers and Receptionists can use it.
 - **Services, Staff, Inventory, Expenses**: the service menu, team hours and commission, stock
   that goes down on each sale with a full history, and monthly expenses by category.
 - **Reports**: sales before GST, expenses, profit, collections by payment method, top services and products, and

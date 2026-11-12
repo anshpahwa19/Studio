@@ -85,15 +85,13 @@ model Staff {
   attendance     Attendance[]
 }
 
-// One row per staff member per day. A day with no row is simply "not marked".
+// One row per staff member per day they punched in. A working day with no row counts as absent.
 model Attendance {
   id        String   @id @default(cuid())
   staffId   String
   date      String
-  status    String // Present | HalfDay | Leave | Absent
-  checkIn   String? // HH:mm
+  checkIn   String // HH:mm
   checkOut  String? // HH:mm
-  note      String?
   createdAt DateTime @default(now())
   staff     Staff    @relation(fields: [staffId], references: [id])
 

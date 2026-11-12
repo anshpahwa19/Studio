@@ -6,63 +6,55 @@ import { attempt } from '@/lib/action';
 import { ActionError, requireEdit } from '@/lib/session';
 import { toMinutes } from '@/lib/format';
 import * as v from '@/lib/validate';
-import { STATUSES } from '@/lib/attendance';
 
-const timeOrBlank = v.time.or(z.literal('')).optional().nullable().transform((t) => t || null);
+const base = z.object({ staffId: v.id, date: v.date });
+const blankable = v.time.or(z.literal('')).optional().nullable().transform((t) => t || null);
 
-const schema = z.object({
-  staffId: v.id,
-  date: v.date,
-  status: z.enum(STATUSES),
-  checkIn: timeOrBlank,
-  checkOut: timeOrBlank,
-  note: v.optional(200),
-});
-export type AttendanceInput = z.input<typeof schema>;
+async function activeStaff(id: string) {
+  const s = await db.staff.findUnique({ where: { id }, select: { active: true } });
+  if (!s?.active) throw new ActionError('That staff member is no longer active.');
+}
 
-export async function saveAttendance(input: AttendanceInput) {
+export async function punchIn(input: { staffId: string; date: string; time: string }) {
   return attempt(async () => {
     await requireEdit('attendance');
-    const { staffId, date, ...rest } = schema.parse(input);
-    if (rest.checkIn && rest.checkOut && toMinutes(rest.checkOut) <= toMinutes(rest.checkIn)) {
-      throw new ActionError('Check-out must be after check-in.');
+    const { staffId, date, time } = base.extend({ time: v.time }).parse(input);
+    await activeStaff(staffId);
+    if (await db.attendance.findUnique({ where: { staffId_date: { staffId, date } } })) throw new ActionError('Already punched in for this day.');
+    await db.attendance.create({ data: { staffId, date, checkIn: time } });
+    revalidatePath('/attendance');
+  });
+}
+
+export async function punchOut(input: { staffId: string; date: string; time: string }) {
+  return attempt(async () => {
+    await requireEdit('attendance');
+    const { staffId, date, time } = base.extend({ time: v.time }).parse(input);
+    const rec = await db.attendance.findUnique({ where: { staffId_date: { staffId, date } } });
+    if (!rec) throw new ActionError('Punch in first.');
+    if (toMinutes(time) <= toMinutes(rec.checkIn)) throw new ActionError('Punch out must be after punch in.');
+    await db.attendance.update({ where: { id: rec.id }, data: { checkOut: time } });
+    revalidatePath('/attendance');
+  });
+}
+
+/** Correct or enter times by hand. Clearing the punch-in removes the day (the person counts as absent). */
+export async function saveTimes(input: { staffId: string; date: string; checkIn?: string | null; checkOut?: string | null }) {
+  return attempt(async () => {
+    await requireEdit('attendance');
+    const { staffId, date, checkIn, checkOut } = base.extend({ checkIn: blankable, checkOut: blankable }).parse(input);
+    if (!checkIn) {
+      if (checkOut) throw new ActionError('Enter a punch-in time too.');
+      await db.attendance.deleteMany({ where: { staffId, date } });
+    } else {
+      if (checkOut && toMinutes(checkOut) <= toMinutes(checkIn)) throw new ActionError('Punch out must be after punch in.');
+      await activeStaff(staffId);
+      await db.attendance.upsert({
+        where: { staffId_date: { staffId, date } },
+        create: { staffId, date, checkIn, checkOut },
+        update: { checkIn, checkOut },
+      });
     }
-    if (rest.status === 'Leave' || rest.status === 'Absent') { rest.checkIn = null; rest.checkOut = null; }
-    const staff = await db.staff.findUnique({ where: { id: staffId }, select: { active: true } });
-    if (!staff?.active) throw new ActionError('That staff member is no longer active.');
-    await db.attendance.upsert({
-      where: { staffId_date: { staffId, date } },
-      create: { staffId, date, ...rest },
-      update: rest,
-    });
     revalidatePath('/attendance');
-  });
-}
-
-export async function clearAttendance(staffId: string, date: string) {
-  return attempt(async () => {
-    await requireEdit('attendance');
-    v.date.parse(date);
-    await db.attendance.deleteMany({ where: { staffId, date } });
-    revalidatePath('/attendance');
-  });
-}
-
-/** Marks everyone who works on that day and has no record yet as Present, at their shift times. */
-export async function markAllPresent(date: string) {
-  return attempt(async () => {
-    await requireEdit('attendance');
-    v.date.parse(date);
-    const dow = new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10))).getDay();
-    const [staff, marked] = await Promise.all([
-      db.staff.findMany({ where: { active: true } }),
-      db.attendance.findMany({ where: { date }, select: { staffId: true } }),
-    ]);
-    const done = new Set(marked.map((m) => m.staffId));
-    const todo = staff.filter((s) => !done.has(s.id) && s.workDays.split(',').includes(String(dow)));
-    if (!todo.length) throw new ActionError('Everyone scheduled that day is already marked.');
-    await db.attendance.createMany({ data: todo.map((s) => ({ staffId: s.id, date, status: 'Present', checkIn: s.startTime, checkOut: null })) });
-    revalidatePath('/attendance');
-    return todo.length;
   });
 }
