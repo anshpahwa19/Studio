@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight, CalendarCheck, CalendarDays, CalendarPlus, Ch
 import { db } from '@/lib/db';
 import { requirePage } from '@/lib/session';
 import { canView } from '@/lib/roles';
-import { addDays, fmtDate, fmtDateTime, fmtTime, isoDate, money0, monthStart, plural, toMinutes } from '@/lib/format';
+import { addDays, fmtDate, fmtDateTime, fmtTime, isoDate, money0, plural, toMinutes } from '@/lib/format';
 import { ApptStatus, Card, Empty, IconTile, Pill, Stat, type IconTone } from '@/components/ui';
 import { SyncButton } from './sync-button';
 
@@ -15,37 +15,29 @@ export default async function Dashboard() {
   const stock = canView(user.role, 'inventory');
   const spend = canView(user.role, 'expenses');
   const today = isoDate();
-  const from14 = addDays(today, -13);
   const paidFilter = { invoice: { status: { not: 'Void' } } };
 
-  const [settings, appts, payments14, monthPaid, lastMonthPaid, dues, lowStock, activeClients, newClients, recent] = await Promise.all([
+  const [settings, appts, paymentsToday, billsToday, lowStock, newClients, recent] = await Promise.all([
     db.settings.findUniqueOrThrow({ where: { id: 1 } }),
     db.appointment.findMany({
       where: { date: today }, orderBy: { startTime: 'asc' },
       include: { customer: { select: { id: true, name: true } }, staff: { select: { name: true } }, services: { select: { name: true } } },
     }),
-    money ? db.payment.findMany({ where: { ...paidFilter, createdAt: { gte: start(from14) } }, select: { amount: true, createdAt: true } }) : [],
-    money ? db.payment.aggregate({ where: { ...paidFilter, createdAt: { gte: start(monthStart(today)) } }, _sum: { amount: true } }) : null,
-    money ? db.payment.aggregate({ where: { ...paidFilter, createdAt: { gte: start(monthStart(addDays(monthStart(today), -1))), lt: start(monthStart(today)) } }, _sum: { amount: true } }) : null,
-    money ? db.invoice.aggregate({ where: { status: { in: ['Unpaid', 'Partial'] } }, _sum: { total: true, paid: true }, _count: true }) : null,
+    money ? db.payment.findMany({ where: { ...paidFilter, createdAt: { gte: start(today) } }, select: { amount: true } }) : [],
+    db.invoice.findMany({ where: { status: { not: 'Void' }, createdAt: { gte: start(today) } }, select: { customerId: true, total: true, paid: true } }),
     stock ? db.product.findMany({ where: { active: true }, select: { stock: true, reorderLevel: true } }) : [],
-    db.customer.count({ where: { active: true } }),
-    db.customer.count({ where: { active: true, createdAt: { gte: start(addDays(today, -29)) } } }),
+    db.customer.count({ where: { active: true, createdAt: { gte: start(today) } } }),
     money ? db.payment.findMany({ where: paidFilter, orderBy: { createdAt: 'desc' }, take: 6, include: { invoice: { select: { id: true, number: true, customer: { select: { name: true } } } } } }) : [],
   ]);
 
-  const byDay = new Map<string, number>();
-  for (const p of payments14) byDay.set(isoDate(p.createdAt), (byDay.get(isoDate(p.createdAt)) ?? 0) + p.amount);
+  const collected = paymentsToday.reduce((a, p) => a + p.amount, 0);
   const live = appts.filter((a) => !['Cancelled', 'NoShow'].includes(a.status));
   const count = (s: string) => appts.filter((a) => a.status === s).length;
-  const outstanding = dues ? (dues._sum.total ?? 0) - (dues._sum.paid ?? 0) : 0;
+  // Everything on the tiles is for today only: today's bookings, bills and payments.
+  const dueBills = billsToday.filter((i) => i.total - i.paid > 0.5);
+  const outstanding = dueBills.reduce((a, i) => a + i.total - i.paid, 0);
   const low = lowStock.filter((p) => p.stock <= p.reorderLevel).length;
-  const month = monthPaid?._sum.amount ?? 0;
-  const last = lastMonthPaid?._sum.amount ?? 0;
-  const dayOfMonth = Number(today.slice(8));
-  // Compare this month so far with the same number of days last month, pro rata.
-  const lastSoFar = last * Math.min(1, dayOfMonth / 30);
-  const change = lastSoFar > 0 ? Math.round(((month - lastSoFar) / lastSoFar) * 1000) / 10 : null;
+  const clientsToday = new Set([...live.map((a) => a.customer.id), ...billsToday.map((i) => i.customerId)]).size;
 
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -96,18 +88,18 @@ export default async function Dashboard() {
 
       <div className="mb-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <Stat label="Today's appointments" pill="Live today" pillTone="violet" value={live.length} icon={<CalendarDays size={20} />}
-          note={<Foot>{count('Completed')} completed • {count('InService')} in progress</Foot>} />
+          note={<Foot href="/appointments">{count('Completed')} completed • {count('InService')} in progress</Foot>} />
         {money && (
-          <Stat label="Revenue collected" pill={change === null ? 'This month' : `${change >= 0 ? '+' : ''}${change}% MoM`} pillTone={change !== null && change < 0 ? 'red' : 'green'}
-            value={money0(month)} icon={<IndianRupee size={20} />} iconTone="green" note={<Foot href="/reports">{money0(byDay.get(today) ?? 0)} collected today</Foot>} />
+          <Stat label="Revenue collected today" pill="Today" pillTone="green"
+            value={money0(collected)} icon={<IndianRupee size={20} />} iconTone="green" note={<Foot href="/billing">{plural(billsToday.length, 'bill')} made today</Foot>} />
         )}
-        <Stat label="Total active clients" pill="Client base" pillTone="blue" value={activeClients} icon={<Users size={20} />} iconTone="blue"
-          note={<Foot href="/customers">Registered client profiles</Foot>} />
-        <Stat label="New clients (30 days)" pill="Growth" pillTone="amber" value={`+${newClients}`} icon={<UserPlus size={20} />} iconTone="amber"
-          note={<Foot href="/customers">New client acquisition</Foot>} />
+        <Stat label="Clients today" pill="Today" pillTone="blue" value={clientsToday} icon={<Users size={20} />} iconTone="blue"
+          note={<Foot href="/customers">Booked or billed today</Foot>} />
+        <Stat label="New clients today" pill="Growth" pillTone="amber" value={`+${newClients}`} icon={<UserPlus size={20} />} iconTone="amber"
+          note={<Foot href="/customers">Registered today</Foot>} />
         {money && (
-          <Stat label="Pending balances" pill="Receivables" pillTone="red" value={money0(outstanding)} icon={<Clock size={20} />} iconTone="red"
-            note={<Foot href="/billing">{plural(dues?._count ?? 0, 'bill')} not fully paid</Foot>} />
+          <Stat label="Pending balances today" pill="Receivables" pillTone="red" value={money0(outstanding)} icon={<Clock size={20} />} iconTone="red"
+            note={<Foot href="/billing">{plural(dueBills.length, 'bill')} from today not fully paid</Foot>} />
         )}
         {stock ? (
           <Stat label="Products to reorder" pill={low ? 'Low stock' : 'Stocked'} pillTone={low ? 'amber' : 'green'} value={low} icon={<Package size={20} />} iconTone="teal"
