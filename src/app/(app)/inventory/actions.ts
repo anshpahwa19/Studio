@@ -14,14 +14,15 @@ const productSchema = z.object({
   sku: v.optional(40),
   category: v.required(60),
   supplierId: v.optional(40),
-  costPrice: v.money,
-  price: v.money,
+  costPrice: v.money.refine((n) => n > 0, 'enter the cost price first'),
+  price: v.money.refine((n) => n > 0, 'enter the selling price'),
   reorderLevel: z.coerce.number().int().min(0).max(100000),
   unit: v.required(10),
   openingStock: z.coerce.number().int().min(0).max(100000).optional(),
   openingBranchId: v.optional(40),
 });
 export type ProductInput = z.input<typeof productSchema>;
+const checkedProduct = productSchema.refine((p) => p.price >= p.costPrice, { path: ['price'], message: 'cannot be lower than the cost price' });
 
 /** Turns the stock helper's errors into messages for the form. */
 async function pickBranch(tx: Parameters<typeof resolveBranch>[0], id: string | null | undefined) {
@@ -35,7 +36,7 @@ async function pickBranch(tx: Parameters<typeof resolveBranch>[0], id: string | 
 export async function saveProduct(input: ProductInput) {
   return attempt(async () => {
     await requireEdit('inventory');
-    const { id, openingStock, openingBranchId, ...data } = productSchema.parse(input);
+    const { id, openingStock, openingBranchId, ...data } = checkedProduct.parse(input);
     if (id) {
       await db.product.update({ where: { id }, data });
     } else {

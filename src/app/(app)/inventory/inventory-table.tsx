@@ -83,8 +83,8 @@ export function InventoryTable({ products, suppliers, branches, branch, autoStoc
               <datalist id="product-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
             </Field>
             <Field label="SKU"><Input value={edit.sku ?? ''} onChange={(e) => setEdit({ ...edit, sku: e.target.value })} /></Field>
-            <Field label="Cost price (₹)"><Input type="number" min="0" step="0.01" value={edit.costPrice} onChange={(e) => setEdit({ ...edit, costPrice: e.target.value as unknown as number })} /></Field>
-            <Field label="Selling price before GST (₹)"><Input type="number" min="0" step="0.01" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value as unknown as number })} required /></Field>
+            <Field label="Cost price (₹)"><Input type="number" min="0.01" step="0.01" value={edit.costPrice || ''} onChange={(e) => setEdit({ ...edit, costPrice: e.target.value as unknown as number })} required /></Field>
+            <Field label="Selling price before GST (₹)" hint={Number(edit.costPrice) > 0 ? undefined : 'Enter the cost price first'}><Input type="number" min={Number(edit.costPrice) || 0.01} step="0.01" disabled={!(Number(edit.costPrice) > 0)} title="Cannot be lower than the cost price" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value as unknown as number })} required /></Field>
             <Field label="Unit"><Input value={edit.unit} onChange={(e) => setEdit({ ...edit, unit: e.target.value })} required placeholder="pcs, ml, bottle" /></Field>
             <Field label="Reorder at"><Input type="number" min="0" value={edit.reorderLevel} onChange={(e) => setEdit({ ...edit, reorderLevel: e.target.value as unknown as number })} /></Field>
             {!edit.id && <Field label="Opening stock"><Input type="number" min="0" value={edit.openingStock ?? 0} onChange={(e) => setEdit({ ...edit, openingStock: e.target.value as unknown as number })} /></Field>}

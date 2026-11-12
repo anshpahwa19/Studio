@@ -10,7 +10,7 @@ const serviceSchema = z.object({
   id: z.string().optional(),
   name: v.required(120),
   categoryId: v.id,
-  price: v.money,
+  price: v.money.refine((n) => n > 0, 'enter a price'),
   duration: z.coerce.number().int().min(5, 'must be at least 5 minutes').max(600),
   description: v.optional(500),
 });
