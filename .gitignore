@@ -11,3 +11,4 @@ next-env.d.ts
 # Local database (created by `npm run setup`)
 prisma/*.db
 prisma/*.db-journal
+.next-check
