@@ -42,3 +42,11 @@ export async function archiveStaff(id: string) {
     revalidatePath('/staff');
   });
 }
+
+export async function restoreStaff(id: string) {
+  return attempt(async () => {
+    await requireEdit('staff');
+    await db.staff.update({ where: { id }, data: { active: true } });
+    revalidatePath('/staff');
+  });
+}

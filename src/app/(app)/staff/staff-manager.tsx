@@ -5,29 +5,38 @@ import { Badge, Button, Card, Empty, Field, Input } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { DAY_NAMES, fmtTime, plural } from '@/lib/format';
-import { archiveStaff, saveStaff, type StaffInput } from './actions';
+import { archiveStaff, restoreStaff, saveStaff, type StaffInput } from './actions';
 
-type Member = { id: string; name: string; phone: string; email: string | null; title: string; skills: string; commissionRate: number; workDays: string; startTime: string; endTime: string; upcoming: number };
+type Member = { id: string; name: string; phone: string; email: string | null; title: string; skills: string; commissionRate: number; workDays: string; startTime: string; endTime: string; upcoming: number; active: boolean };
 
 const blank: StaffInput = { name: '', phone: '', email: '', title: 'Stylist', skills: '', commissionRate: 25, workDays: [1, 2, 3, 4, 5, 6], startTime: '09:00', endTime: '20:00' };
 
 export function StaffManager({ staff }: { staff: Member[] }) {
   const [f, setF] = useState<StaffInput | null>(null);
   const [archiving, setArchiving] = useState<Member | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const { run, pending } = useAction();
+  const archivedCount = staff.filter((s) => !s.active).length;
+  const shown = staff.filter((s) => showArchived || s.active);
 
   return (
     <>
-      <div className="mb-5 flex justify-end"><Button onClick={() => setF(blank)}><Plus size={16} />Add team member</Button></div>
-      {staff.length === 0 ? <Card><Empty title="No team members yet">Add stylists and nail technicians so you can book them.</Empty></Card> : (
+      <div className="mb-5 flex flex-wrap items-center justify-end gap-4">
+        <label className="flex cursor-pointer items-center gap-2 text-[14px] text-ink-soft">
+          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="h-4 w-4 accent-violet-600" />
+          Show archived{archivedCount > 0 && ` (${archivedCount})`}
+        </label>
+        <Button onClick={() => setF(blank)}><Plus size={16} />Add team member</Button>
+      </div>
+      {shown.length === 0 ? <Card><Empty title="No team members yet">Add stylists and nail technicians so you can book them.</Empty></Card> : (
         <div className="grid gap-4 md:grid-cols-2">
-          {staff.map((s) => {
+          {shown.map((s) => {
             const days = s.workDays.split(',').map(Number);
             return (
-              <Card key={s.id}>
+              <Card key={s.id} className={s.active ? '' : 'bg-stone-50'}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[16px] font-semibold">{s.name}</div>
+                    <div className="flex items-center gap-2 text-[16px] font-semibold">{s.name}{!s.active && <Badge>Archived</Badge>}</div>
                     <div className="text-ink-mute">{s.title} · {s.phone}</div>
                   </div>
                   <Badge tone="plum">{s.commissionRate}% commission</Badge>
@@ -43,7 +52,9 @@ export function StaffManager({ staff }: { staff: Member[] }) {
                   <span className="text-[12.5px] text-ink-mute">{plural(s.upcoming, 'upcoming booking')}</span>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => setF({ ...s, workDays: days })}>Edit</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setArchiving(s)}>Archive</Button>
+                    {s.active
+                      ? <Button size="sm" variant="ghost" onClick={() => setArchiving(s)}>Archive</Button>
+                      : <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => restoreStaff(s.id), 'Team member restored')}>Unarchive</Button>}
                   </div>
                 </div>
               </Card>
