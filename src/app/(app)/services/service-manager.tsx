@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input, Select, Textarea } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { fmtDuration, money0 } from '@/lib/format';
 import { addCategory, archiveService, restoreService, saveService, type ServiceInput } from './api';
 

@@ -4,7 +4,7 @@ import { Download, Printer } from 'lucide-react';
 import { toast } from '@/components/toast';
 import { Button, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { money, round2 } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
 import { addPayment, cancelInvoice, refundInvoice } from '../api';

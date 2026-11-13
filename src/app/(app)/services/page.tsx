@@ -1,7 +1,7 @@
-import { api } from '@/lib/api-server';
-import type { listServices } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { listServices } from '@/server/features/services/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { canEdit } from '@/lib/roles';
 import { PageHeader } from '@/components/ui';
 import { plural } from '@/lib/format';

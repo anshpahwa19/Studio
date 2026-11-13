@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Check, Clock, Minus, Package, Plus, Receipt, Scissors, Search, ShoppingBag, Trash2, UserPlus } from 'lucide-react';
 import { Button, Card, Field, Input, Select, Textarea, cx } from '@/components/ui';
 import { ClientCombobox } from '@/components/client-combobox';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { computeBill } from '@/lib/billing';
 import { fmtDuration, money, round2 } from '@/lib/format';
 import { PAYMENT_METHODS, phoneProps } from '@/lib/validate';

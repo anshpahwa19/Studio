@@ -1,6 +1,6 @@
-import { call, type DataOf } from '@/lib/api-client';
-import type * as s from './service';
-export type { InvoiceInput, RefundInput } from './service';
+import { call, type DataOf } from '@/client/api-client';
+import type * as s from '@/server/features/billing/service';
+export type { InvoiceInput, RefundInput } from '@/server/features/billing/service';
 
 export const createInvoice = (i: s.InvoiceInput) => call<DataOf<typeof s.createInvoice>>('POST', '/invoices', i);
 export const addPayment = (invoiceId: string, i: Parameters<typeof s.addPayment>[1]) => call('POST', `/invoices/${invoiceId}/payments`, i);

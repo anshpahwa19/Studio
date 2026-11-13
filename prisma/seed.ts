@@ -5,8 +5,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
-import { computeBill, invoiceStatus } from '../src/lib/billing';
-import { addDays, fromMinutes, isoDate, toMinutes } from '../src/lib/format';
+import { computeBill, invoiceStatus } from '@/lib/billing';
+import { addDays, fromMinutes, isoDate, toMinutes } from '@/lib/format';
 
 const db = new PrismaClient();
 const EMPTY = process.argv.includes('--empty');

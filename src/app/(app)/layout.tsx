@@ -1,8 +1,8 @@
-import { currentUser } from '@/lib/session';
+import { currentUser } from '@/server/auth/session';
 import { redirect } from 'next/navigation';
-import { api } from '@/lib/api-server';
-import type { alerts as alertsFn } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
+import { api } from '@/server/api/fetch';
+import type { alerts as alertsFn } from '@/server/features/dashboard/queries';
+import type { DataOf } from '@/client/api-client';
 import { canView, type Area } from '@/lib/roles';
 import { plural } from '@/lib/format';
 import { Shell } from '@/components/sidebar';

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ApptStatus, Button, Card, Empty, Field, Input, PageHeader, Select, Textarea, apptLabel, cx } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { toast } from '@/components/toast';
 import { addDays, dayOfWeek, fmtDate, fmtDuration, fmtTime, fromMinutes, isoDate, money0, toMinutes, weekStart } from '@/lib/format';
 import { bookAppointment, rescheduleAppointment, setAppointmentStatus } from './api';

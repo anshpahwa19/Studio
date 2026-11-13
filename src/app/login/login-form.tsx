@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { call } from '@/lib/api-client';
-import { saveSession } from '@/lib/client-session';
+import { call } from '@/client/api-client';
+import { saveSession } from '@/client/session';
 import { Button, Field, Input } from '@/components/ui';
 
 export function LoginForm() {

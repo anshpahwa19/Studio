@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import { Button, Card, Empty, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { SortTh, useSort } from '@/components/sort-button';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { fmtDate, isoDate, money } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
 import { deleteExpense, saveExpense, type ExpenseInput } from './api';

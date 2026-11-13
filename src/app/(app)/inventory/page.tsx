@@ -1,7 +1,9 @@
-import { api } from '@/lib/api-server';
-import type { listBranches, listProducts, listSuppliers } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { listBranches } from '@/server/features/settings/queries';
+import type { listProducts } from '@/server/features/inventory/queries';
+import type { listSuppliers } from '@/server/features/suppliers/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { isoDate, money0 } from '@/lib/format';
 import { PageHeader, Stat } from '@/components/ui';
 import { BranchPicker } from './branch-picker';

@@ -1,7 +1,11 @@
-import { api } from '@/lib/api-server';
-import type { getSettings, listAppointments, listBranches, listCustomers, listServices, listStaff } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { getSettings, listBranches } from '@/server/features/settings/queries';
+import type { listAppointments } from '@/server/features/appointments/queries';
+import type { listCustomers } from '@/server/features/customers/queries';
+import type { listServices } from '@/server/features/services/queries';
+import type { listStaff } from '@/server/features/staff/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { canEdit, canView } from '@/lib/roles';
 import { addDays, isoDate, weekStart } from '@/lib/format';
 import { Planner } from './planner';

@@ -1,6 +1,6 @@
-import { call, type DataOf } from '@/lib/api-client';
-import type * as s from './service';
-export type { SettingsInput } from './service';
+import { call, type DataOf } from '@/client/api-client';
+import type * as s from '@/server/features/settings/service';
+export type { SettingsInput } from '@/server/features/settings/service';
 
 export const saveSettings = (i: s.SettingsInput) => call('PUT', '/settings', i);
 type Branch = Parameters<typeof s.saveBranch>[0];

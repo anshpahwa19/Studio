@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Mail, MapPin, Phone, Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input, Textarea } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { fmtDate, money0, plural } from '@/lib/format';
 import { saveSupplier, setSupplierActive, type SupplierInput } from './api';
 

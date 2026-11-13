@@ -1,12 +1,13 @@
 import Link from 'next/link';
-import { api } from '@/lib/api-server';
-import type { listBranches, report } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { listBranches } from '@/server/features/settings/queries';
+import type { report } from '@/server/features/reports/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { fmtDate, money0, plural } from '@/lib/format';
 import { BarChart } from '@/components/bar-chart';
 import { Card, Empty, Input, PageHeader, Stat, cx } from '@/components/ui';
-import { PRESETS, resolvePeriod } from './period';
+import { PRESETS, resolvePeriod } from '@/lib/period';
 import { BranchSelect } from './branch-select';
 
 export default async function ReportsPage({ searchParams }: { searchParams: { period?: string; from?: string; to?: string; branch?: string } }) {

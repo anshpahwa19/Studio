@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { ArrowLeft, Scissors } from 'lucide-react';
-import { api } from '@/lib/api-server';
-import type { getInvoice, getSettings } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { getInvoice } from '@/server/features/billing/queries';
+import type { getSettings } from '@/server/features/settings/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { isSenior } from '@/lib/roles';
 import { fmtDate, fmtDateTime, money, rupeesInWords } from '@/lib/format';
 import { InvoiceStatus } from '@/components/ui';

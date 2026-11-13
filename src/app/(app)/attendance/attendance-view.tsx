@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, LogIn, LogOut } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input, Stat, cx, type Tone } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { addDays, dayOfWeek, DAY_NAMES, fmtTime, monthEnd } from '@/lib/format';
 import { dayState, hoursWorked, type Day } from '@/lib/attendance';
 import { punchIn, punchOut, saveTimes } from './api';

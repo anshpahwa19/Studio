@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { api } from '@/lib/api-server';
-import type { getSupplier } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { getSupplier } from '@/server/features/suppliers/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { canEdit } from '@/lib/roles';
 import { fmtDate, isoDate, money0 } from '@/lib/format';
 import { dueOf } from '@/lib/purchases';

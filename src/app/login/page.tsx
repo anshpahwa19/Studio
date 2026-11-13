@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { CalendarDays, Receipt, Users } from 'lucide-react';
-import { currentUser } from '@/lib/session';
-import { api } from '@/lib/api-server';
+import { currentUser } from '@/server/auth/session';
+import { api } from '@/server/api/fetch';
 import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';

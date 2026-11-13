@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Badge, Button, Card, Field, Input, Select } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { ROLES } from '@/lib/roles';
 import { GST_RATES, gstinProps, phoneProps } from '@/lib/validate';
 import { deleteBranch, deleteUser, saveBranch, saveSettings, saveUser, type SettingsInput } from './api';

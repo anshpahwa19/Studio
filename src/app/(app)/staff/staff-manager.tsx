@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { DAY_NAMES, fmtTime, money0, plural } from '@/lib/format';
 import { archiveStaff, restoreStaff, saveStaff, type StaffInput } from './api';
 import { phoneProps } from '@/lib/validate';

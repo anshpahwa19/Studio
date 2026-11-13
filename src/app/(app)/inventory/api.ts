@@ -1,6 +1,6 @@
-import { call, type DataOf } from '@/lib/api-client';
-import type * as s from './service';
-export type { ProductInput } from './service';
+import { call, type DataOf } from '@/client/api-client';
+import type * as s from '@/server/features/inventory/service';
+export type { ProductInput } from '@/server/features/inventory/service';
 
 export const saveProduct = (i: s.ProductInput) => call<DataOf<typeof s.saveProduct>>(i.id ? 'PUT' : 'POST', i.id ? `/products/${i.id}` : '/products', i);
 export const archiveProduct = (id: string) => call('POST', `/products/${id}/archive`);

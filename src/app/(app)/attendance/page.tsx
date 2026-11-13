@@ -1,7 +1,8 @@
-import { api } from '@/lib/api-server';
-import type { listAttendance, listStaff } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { listAttendance } from '@/server/features/attendance/queries';
+import type { listStaff } from '@/server/features/staff/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { canEdit } from '@/lib/roles';
 import { dayOfWeek, fmtDate, isoDate, monthEnd } from '@/lib/format';
 import { PageHeader } from '@/components/ui';

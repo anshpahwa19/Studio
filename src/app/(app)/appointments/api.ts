@@ -1,6 +1,6 @@
-import { call, type DataOf } from '@/lib/api-client';
-import type * as s from './service';
-export type { BookInput } from './service';
+import { call, type DataOf } from '@/client/api-client';
+import type * as s from '@/server/features/appointments/service';
+export type { BookInput } from '@/server/features/appointments/service';
 
 export const bookAppointment = (i: s.BookInput) => call<DataOf<typeof s.bookAppointment>>('POST', '/appointments', i);
 export const setAppointmentStatus = (id: string, status: string) => call('POST', `/appointments/${id}/status`, { status });

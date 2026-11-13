@@ -1,4 +1,4 @@
-import { currentUser } from '@/lib/session';
+import { currentUser } from '@/server/auth/session';
 import { redirect } from 'next/navigation';
 import { Card, PageHeader } from '@/components/ui';
 import { PasswordForm } from './password-form';

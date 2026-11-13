@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { toast } from '@/components/toast';
 import { importCustomers, type ImportResult } from './api';
 

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button, Field, Input, Select, Textarea } from '@/components/ui';
 import { toast } from '@/components/toast';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { saveCustomer, type CustomerInput } from './api';
 import { phoneProps } from '@/lib/validate';
 

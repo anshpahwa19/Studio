@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { match } from '@/lib/api-routes';
+import { match } from '@/server/api/routes';
 
 export const dynamic = 'force-dynamic';
 

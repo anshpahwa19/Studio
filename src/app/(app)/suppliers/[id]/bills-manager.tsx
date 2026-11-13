@@ -3,7 +3,7 @@ import { Fragment, useState } from 'react';
 import { ChevronDown, ChevronRight, FileText, Plus } from 'lucide-react';
 import { Badge, Button, Card, Empty, Field, Input, Select, Textarea, type Tone } from '@/components/ui';
 import { Modal } from '@/components/modal';
-import { useAction } from '@/components/use-action';
+import { useAction } from '@/client/use-action';
 import { fmtDate, money } from '@/lib/format';
 import { billStatus, dueOf } from '@/lib/purchases';
 import { PAYMENT_METHODS } from '@/lib/validate';

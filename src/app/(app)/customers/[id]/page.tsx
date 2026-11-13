@@ -1,8 +1,10 @@
 import Link from 'next/link';
-import { api } from '@/lib/api-server';
-import type { getCustomer, listBranches, listStaff } from '@/lib/api-reads';
-import type { DataOf } from '@/lib/api-client';
-import { requirePage } from '@/lib/session';
+import { api } from '@/server/api/fetch';
+import type { getCustomer } from '@/server/features/customers/queries';
+import type { listBranches } from '@/server/features/settings/queries';
+import type { listStaff } from '@/server/features/staff/queries';
+import type { DataOf } from '@/client/api-client';
+import { requirePage } from '@/server/auth/session';
 import { canEdit, canView, isSenior } from '@/lib/roles';
 import { fmtDate, fmtTime, money, money0 } from '@/lib/format';
 import { ApptStatus, Badge, Card, Empty, InvoiceStatus, PageHeader, Stat } from '@/components/ui';
