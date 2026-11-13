@@ -5,6 +5,7 @@ import { api } from '@/server/api/fetch';
 import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Sign in' };
 
 export default async function LoginPage() {
   if (await currentUser()) redirect('/dashboard');

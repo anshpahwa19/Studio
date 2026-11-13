@@ -57,6 +57,8 @@ each URL is one `route.ts` file under `src/app/api/` (for example `src/app/api/c
 
 **Sessions.** Signing in gives a token that lasts 12 hours. The browser keeps it in local storage and sends it with every API call; it also sets a login cookie so page loads work. When the 12 hours are up (or the browser no longer has the token), the app signs the person out. Pages and the sidebar ask `GET /api/me` who is signed in, so only the API looks users up in the database. Signing out ends that session on the server, so a copied token stops working at once; changing a password or switching a login off signs that person out everywhere. After 5 wrong passwords for an email (or 20 from one address) sign-in is blocked for 15 minutes.
 
+**Sharing the link.** Pasting the address into WhatsApp, Slack, Facebook, X or a message shows the salon name, a short description and the logo (`public/share.png`). Set `SITE_URL` in `.env` to the public address (for example `https://salon.example.com`) so chat apps can fetch the image; the tags are in `src/app/layout.tsx`. The app is marked `noindex`, so search engines skip it. The preview is the same for every page, because the app is behind sign-in.
+
 **Other websites.** Browsers only let a website on another domain call the API if its address is listed in `ALLOWED_ORIGINS` in `.env` (comma separated). Those sites sign in with the token, not the cookie. Mobile apps and servers are not affected.
 
 Sign in with `POST /api/auth/login` (`{ "email", "password" }`). It sets the login cookie and returns a `token`;
