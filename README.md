@@ -50,7 +50,7 @@ Data is kept in `~/.config/Salon Studio/salon.db` on Linux and `%APPDATA%\Salon 
 ## API
 
 Everything the app does goes through a REST API under `/api`: every change (new client, stock in, bill, payment) and every read.
-The screens call it, and so can any other client. The code that does the work is in each feature's `service.ts`;
+The screens call it, and so can any other client. Pages load their data from the API's GET endpoints, and saves go to its POST, PUT and DELETE endpoints, so the database is only reached through the API. The code that does the work is in each feature's `service.ts`;
 the routes are listed in `src/lib/api-routes.ts`.
 
 Sign in with `POST /api/auth/login` (`{ "email", "password" }`). It sets the login cookie and returns a `token`;
@@ -79,6 +79,8 @@ Lists accept `?q=` to search, `?limit=` (up to 500) and `?offset=`, plus the fil
 | Endpoint | Returns |
 |---|---|
 | `GET /me` | The signed-in user |
+| `GET /public/branding` | Salon name and address (no login needed; used on the sign-in page) |
+| `GET /alerts` | Counts behind the sidebar alerts |
 | `GET /dashboard` | Today's appointments, bills, money collected, new clients, low stock |
 | `GET /reports?period=today\|week\|month\|lastmonth\|year` or `?from=&to=`, `&branch=` | Sales, GST, collections, expenses, profit, daily series, top services and products, payment methods, staff performance, branch comparison |
 | `GET /reports/export?type=invoices\|expenses&…` | CSV download |

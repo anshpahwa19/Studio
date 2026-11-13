@@ -1,7 +1,8 @@
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { listBranches, listProducts, listSuppliers } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { isoDate, money0 } from '@/lib/format';
-import { stockByBranch } from '@/lib/stock';
 import { PageHeader, Stat } from '@/components/ui';
 import { BranchPicker } from './branch-picker';
 import { InventoryTable } from './inventory-table';
@@ -10,19 +11,15 @@ import { MonthlyPage } from './monthly';
 
 export default async function InventoryPage({ searchParams }: { searchParams: { view?: string; month?: string; stock?: string; branch?: string } }) {
   await requirePage('inventory');
-  const branches = await db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
+  const branches = (await api<DataOf<typeof listBranches>>('/branches')).filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }));
   const branch = branches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
   if (searchParams.view === 'month') return <MonthlyPage branches={branches} branch={branch} month={/^\d{4}-(0[1-9]|1[0-2])$/.test(searchParams.month ?? '') ? searchParams.month! : isoDate().slice(0, 7)} />;
-  const [rows, suppliers] = await Promise.all([
-    db.product.findMany({ where: { active: true }, orderBy: { name: 'asc' }, include: { supplierRef: { select: { name: true } } } }),
-    db.supplier.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+  // With a branch chosen the stock figures are that branch's shelf; otherwise the total across branches.
+  const [{ items: products }, allSuppliers] = await Promise.all([
+    api<DataOf<typeof listProducts>>('/products', { branch }),
+    api<DataOf<typeof listSuppliers>>('/suppliers'),
   ]);
-  const shelves = await stockByBranch(rows.map((p) => p.id));
-  // With a branch chosen the figures are that branch's shelf; otherwise the total across branches.
-  const products = rows.map(({ supplierRef, ...p }) => {
-    const byBranch = Object.fromEntries(shelves.get(p.id) ?? []);
-    return { ...p, supplierName: supplierRef?.name ?? null, byBranch, stock: branch ? byBranch[branch] ?? 0 : p.stock };
-  });
+  const suppliers = allSuppliers.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name }));
   const low = products.filter((p) => p.stock <= p.reorderLevel).length;
   const value = products.reduce((a, p) => a + p.stock * p.costPrice, 0);
   return (

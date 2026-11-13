@@ -1,8 +1,10 @@
 import { currentUser } from '@/lib/session';
 import { redirect } from 'next/navigation';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { alerts as alertsFn } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { canView, type Area } from '@/lib/roles';
-import { isoDate, plural } from '@/lib/format';
+import { plural } from '@/lib/format';
 import { Shell } from '@/components/sidebar';
 
 export const dynamic = 'force-dynamic';
@@ -27,16 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect('/login');
   const billing = canView(user.role, 'billing');
   const stock = canView(user.role, 'inventory');
-  const buying = canView(user.role, 'suppliers');
-  const [settings, waiting, dues, products, supplierBills] = await Promise.all([
-    db.settings.findUnique({ where: { id: 1 }, select: { name: true } }),
-    db.appointment.count({ where: { date: isoDate(), status: 'CheckedIn' } }),
-    billing ? db.invoice.count({ where: { status: { in: ['Unpaid', 'Partial'] } } }) : 0,
-    stock ? db.product.findMany({ where: { active: true }, select: { stock: true, reorderLevel: true } }) : [],
-    buying ? db.supplierBill.findMany({ where: { dueDate: { lt: isoDate() } }, select: { amount: true, paid: true } }) : [],
-  ]);
-  const overdueBills = supplierBills.filter((b) => b.amount - b.paid > 0.005).length;
-  const low = products.filter((p) => p.stock <= p.reorderLevel).length;
+  const { salon, waiting, billsWithDues: dues, lowStock: low, overdueSupplierBills: overdueBills } = await api<DataOf<typeof alertsFn>>('/alerts');
   const alerts = [
     ...(waiting ? [{ href: '/appointments', text: `${plural(waiting, 'client')} checked in and waiting`, tone: 'violet' as const }] : []),
     ...(dues ? [{ href: '/billing', text: `${plural(dues, 'bill')} with money still due`, tone: 'amber' as const }] : []),
@@ -45,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
   const items = NAV.filter((n) => canView(user.role, n.area)).map(({ href, label }) => ({ href, label }));
   return (
-    <Shell items={items} salon={settings?.name ?? 'Salon'} user={{ name: user.name, role: user.role }} alerts={alerts} canBill={billing} canStock={stock}>
+    <Shell items={items} salon={salon ?? 'Salon'} user={{ name: user.name, role: user.role }} alerts={alerts} canBill={billing} canStock={stock}>
       {children}
     </Shell>
   );

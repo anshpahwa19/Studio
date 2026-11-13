@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { listBranches, listCustomers, listStaff } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { canEdit } from '@/lib/roles';
 import { fmtDate, money0, plural } from '@/lib/format';
@@ -12,61 +14,17 @@ import { BranchFilter } from './branch-filter';
 export default async function CustomersPage({ searchParams }: { searchParams: { q?: string; new?: string; branch?: string; sort?: string; dir?: string } }) {
   const user = await requirePage('customers');
   const q = searchParams.q?.trim() ?? '';
-  const branches = await db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
+  const branches = (await api<DataOf<typeof listBranches>>('/branches')).filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }));
   const branch = branches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
-  // "Visited" means a bill that is not cancelled, or an appointment that was not cancelled or missed.
-  const visitedAppt = { status: { notIn: ['Cancelled', 'NoShow'] } };
-  const customers = await db.customer.findMany({
-    where: {
-      active: true,
-      ...(q && { OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] }),
-      ...(branch && { AND: [{ OR: [{ branchId: branch }, { appointments: { some: { branchId: branch, ...visitedAppt } } }, { invoices: { some: { branchId: branch, status: { not: 'Cancelled' } } } }] }] }),
-    },
-    orderBy: { name: 'asc' },
-    take: 300,
-    include: { preferredStaff: { select: { name: true } } },
-  });
-  const ids = customers.map((c) => c.id);
-  const [spend, visits, staff, apptBranches, billBranches] = await Promise.all([
-    db.invoice.groupBy({ by: ['customerId'], where: { customerId: { in: ids }, status: { not: 'Cancelled' } }, _sum: { total: true, paid: true } }),
-    db.appointment.groupBy({ by: ['customerId'], where: { customerId: { in: ids }, status: 'Completed' }, _count: true, _max: { date: true } }),
-    db.staff.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
-    db.appointment.groupBy({ by: ['customerId', 'branchId'], where: { customerId: { in: ids }, branchId: { not: null }, ...visitedAppt } }),
-    db.invoice.groupBy({ by: ['customerId', 'branchId'], where: { customerId: { in: ids }, branchId: { not: null }, status: { not: 'Cancelled' } } }),
-  ]);
-  const branchName = new Map(branches.map((b) => [b.id, b.name]));
-  const visited = new Map<string, Set<string>>();
-  for (const c of customers) { const n = c.branchId && branchName.get(c.branchId); if (n) visited.set(c.id, new Set([n])); }
-  for (const r of [...apptBranches, ...billBranches]) {
-    const name = branchName.get(r.branchId!);
-    if (name) visited.set(r.customerId, (visited.get(r.customerId) ?? new Set()).add(name));
-  }
-  const spendMap = new Map(spend.map((s) => [s.customerId, s._sum]));
-  const visitMap = new Map(visits.map((s) => [s.customerId, s]));
-
   const FIELDS = ['name', 'stylist', 'branches', 'visits', 'last', 'billed', 'due'];
   const sort = FIELDS.includes(searchParams.sort ?? '') ? searchParams.sort! : 'name';
   const dir: 'asc' | 'desc' = searchParams.dir === 'desc' ? 'desc' : 'asc';
-  const keyOf = (c: (typeof customers)[number]): string | number => {
-    const s = spendMap.get(c.id);
-    switch (sort) {
-      case 'stylist': return (c.preferredStaff?.name ?? '').toLowerCase();
-      case 'branches': return [...(visited.get(c.id) ?? [])].sort().join(', ').toLowerCase();
-      case 'visits': return visitMap.get(c.id)?._count ?? 0;
-      case 'last': return visitMap.get(c.id)?._max.date ?? '';
-      case 'billed': return s?.total ?? 0;
-      case 'due': return (s?.total ?? 0) - (s?.paid ?? 0);
-      default: return c.name.toLowerCase();
-    }
-  };
-  // Empty values (no stylist, no visit yet) always go to the bottom, whichever way the column is sorted.
-  const empty = (k: string | number) => k === '' ;
-  const sorted = [...customers].sort((a, b) => {
-    const ka = keyOf(a), kb = keyOf(b);
-    if (empty(ka) !== empty(kb)) return empty(ka) ? 1 : -1;
-    const r = typeof ka === 'number' && typeof kb === 'number' ? ka - kb : String(ka).localeCompare(String(kb));
-    return (dir === 'asc' ? r : -r) || a.name.localeCompare(b.name);
-  });
+  const [{ items: sorted }, staffList] = await Promise.all([
+    api<DataOf<typeof listCustomers>>('/customers', { q, branch, sort, dir, limit: 300 }),
+    api<DataOf<typeof listStaff>>('/staff'),
+  ]);
+  const customers = sorted;
+  const staff = staffList.map((s) => ({ id: s.id, name: s.name }));
   const keep: Record<string, string> = { ...(q && { q }), ...(branch && { branch }) };
 
   return (
@@ -99,17 +57,15 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
               </tr></thead>
               <tbody>
                 {sorted.map((c) => {
-                  const s = spendMap.get(c.id);
-                  const v = visitMap.get(c.id);
-                  const due = (s?.total ?? 0) - (s?.paid ?? 0);
+                  const due = c.due;
                   return (
                     <tr key={c.id} className="hover:bg-canvas/60">
                       <td><Link href={`/customers/${c.id}`} className="font-medium text-ink hover:text-plum-600">{c.name}</Link><div className="text-[12.5px] text-ink-mute">{c.phone}</div></td>
-                      <td className="text-ink-soft">{c.preferredStaff?.name ?? '—'}</td>
-                      <td>{visited.get(c.id) ? <div className="flex flex-wrap gap-1">{[...visited.get(c.id)!].sort().map((n) => <Badge key={n} tone="plum">{n}</Badge>)}</div> : <span className="text-ink-mute">—</span>}</td>
-                      <td className="tabular text-right">{v?._count ?? 0}</td>
-                      <td className="text-ink-soft">{v?._max.date ? fmtDate(v._max.date) : '—'}</td>
-                      <td className="tabular text-right">{money0(s?.total ?? 0)}</td>
+                      <td className="text-ink-soft">{c.preferredStaffName ?? '—'}</td>
+                      <td>{c.branchesVisited.length ? <div className="flex flex-wrap gap-1">{c.branchesVisited.map((n) => <Badge key={n} tone="plum">{n}</Badge>)}</div> : <span className="text-ink-mute">—</span>}</td>
+                      <td className="tabular text-right">{c.visits}</td>
+                      <td className="text-ink-soft">{c.lastVisit ? fmtDate(c.lastVisit) : '—'}</td>
+                      <td className="tabular text-right">{money0(c.billed)}</td>
                       <td className={`tabular text-right ${due > 0.5 ? 'font-medium text-amber-700' : 'text-ink-mute'}`}>{due > 0.5 ? money0(due) : '—'}</td>
                     </tr>
                   );

@@ -1,20 +1,17 @@
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { listStaff } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
-import { isoDate } from '@/lib/format';
 import { PageHeader } from '@/components/ui';
 import { StaffManager } from './staff-manager';
 
 export default async function StaffPage() {
   await requirePage('staff');
-  const [staff, upcoming] = await Promise.all([
-    db.staff.findMany({ orderBy: { name: 'asc' } }),
-    db.appointment.groupBy({ by: ['staffId'], where: { status: 'Booked', date: { gte: isoDate() } }, _count: true }),
-  ]);
-  const counts = new Map(upcoming.map((u) => [u.staffId, u._count]));
+  const staff = await api<DataOf<typeof listStaff>>('/staff', { archived: 1 });
   return (
     <>
       <PageHeader title="Staff Management" subtitle="Working days and hours decide when each person can be booked. Pay is either a fixed monthly salary or a commission." />
-      <StaffManager staff={staff.map((s) => ({ ...s, upcoming: counts.get(s.id) ?? 0 }))} />
+      <StaffManager staff={staff as React.ComponentProps<typeof StaffManager>['staff']} />
     </>
   );
 }

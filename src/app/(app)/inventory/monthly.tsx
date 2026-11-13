@@ -1,4 +1,6 @@
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { monthlyStock } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { fmtDate, parseDate } from '@/lib/format';
 import { Card, Empty, PageHeader, Stat } from '@/components/ui';
 import { MonthPicker } from './month-picker';
@@ -7,25 +9,10 @@ import { StockTabs } from './stock-tabs';
 
 /** Stock for one month: opening count, what came in, what went out, and the closing count, per product. */
 export async function MonthlyPage({ month, branch, branches }: { month: string; branch: string; branches: { id: string; name: string }[] }) {
-  const inBranch = branch ? { branchId: branch } : {};
   const from = parseDate(`${month}-01`);
-  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
-  const [products, before, during, received] = await Promise.all([
-    db.product.findMany({ orderBy: { name: 'asc' } }),
-    db.stockMovement.groupBy({ by: ['productId'], where: { createdAt: { lt: from }, ...inBranch }, _sum: { change: true } }),
-    db.stockMovement.groupBy({ by: ['productId', 'type'], where: { createdAt: { gte: from, lt: to }, ...inBranch }, _sum: { change: true } }),
-    db.stockMovement.findMany({ where: { type: 'IN', createdAt: { gte: from, lt: to }, ...inBranch }, orderBy: { createdAt: 'desc' }, include: { product: { select: { name: true, unit: true } }, supplier: { select: { name: true } }, branch: { select: { name: true } } } }),
-  ]);
+  const { items, receipts: received } = await api<DataOf<typeof monthlyStock>>('/stock/monthly', { month, branch });
 
-  const opening = new Map(before.map((b) => [b.productId, b._sum.change ?? 0]));
-  const sum = (id: string, ...types: string[]) => during.filter((m) => m.productId === id && types.includes(m.type)).reduce((a, m) => a + (m._sum.change ?? 0), 0);
-  const rows = products
-    .map((p) => {
-      const open = opening.get(p.id) ?? 0;
-      const inn = sum(p.id, 'IN'), sold = sum(p.id, 'SALE', 'RETURN'), used = sum(p.id, 'OUT'), adj = sum(p.id, 'ADJUST'), moved = sum(p.id, 'TRANSFER');
-      return { p, open, inn, sold: -sold, used: -used, adj, moved, close: open + inn + sold + used + adj + moved };
-    })
-    .filter((r) => r.p.active || r.open || r.inn || r.sold || r.used || r.adj || r.moved);
+  const rows = items.map((i) => ({ p: { id: i.productId, name: i.name, category: i.category, active: i.active, unit: i.unit }, open: i.opening, inn: i.received, sold: i.sold, used: i.used, adj: i.corrections, moved: i.transfers, close: i.closing }));
   const totalReceived = rows.reduce((a, r) => a + r.inn, 0);
   const label = fmtDate(from, { month: 'long', year: 'numeric' });
   const num = 'tabular text-right';

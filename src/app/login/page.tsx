@@ -1,14 +1,14 @@
 import { redirect } from 'next/navigation';
 import { CalendarDays, Receipt, Users } from 'lucide-react';
 import { currentUser } from '@/lib/session';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
 import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LoginPage() {
   if (await currentUser()) redirect('/dashboard');
-  const settings = await db.settings.findUnique({ where: { id: 1 } });
+  const settings = await api<{ name: string | null; address: string | null }>('/public/branding');
   const points = [
     [CalendarDays, 'Appointments and stylist rosters'],
     [Receipt, 'GST billing, split payments and dues'],
@@ -23,7 +23,7 @@ export default async function LoginPage() {
           <span className="text-[13px] font-bold uppercase tracking-[0.14em] text-violet-100">Salon Management</span>
         </div>
         <div>
-          <h1 className="text-[40px] font-bold leading-[1.15] tracking-tight">{settings?.name ?? 'Your salon'}</h1>
+          <h1 className="text-[40px] font-bold leading-[1.15] tracking-tight">{settings.name ?? 'Your salon'}</h1>
           <ul className="mt-8 space-y-4">
             {points.map(([Icon, text]) => (
               <li key={text} className="flex items-center gap-3 text-[15px] text-violet-100">
@@ -32,7 +32,7 @@ export default async function LoginPage() {
             ))}
           </ul>
         </div>
-        <div className="text-[13px] text-violet-200">{settings?.address}</div>
+        <div className="text-[13px] text-violet-200">{settings.address}</div>
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/5" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 right-10 h-80 w-80 rounded-full bg-violet-400/20" />
       </div>

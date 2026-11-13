@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { Prisma } from '@prisma/client';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { listBranches, listInvoices } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { fmtDate, money, money0, plural } from '@/lib/format';
 import { SortHead, readSort } from '@/components/sort-head';
@@ -10,30 +11,15 @@ type Search = { q?: string; status?: string; branch?: string; from?: string; to?
 
 export default async function BillingPage({ searchParams: s }: { searchParams: Search }) {
   await requirePage('billing');
-  const where: Prisma.InvoiceWhereInput = {};
-  if (s.status) where.status = s.status;
-  if (s.branch) where.branchId = s.branch;
-  if (s.from || s.to) where.createdAt = { ...(s.from && { gte: new Date(s.from + 'T00:00:00') }), ...(s.to && { lte: new Date(s.to + 'T23:59:59') }) };
-  if (s.q?.trim()) {
-    const q = s.q.trim();
-    where.OR = [{ number: { contains: q } }, { customer: { name: { contains: q } } }, { customer: { phone: { contains: q } } }];
-  }
-
   const { sort, dir } = readSort(s, ['number', 'client', 'date', 'branch', 'total', 'due', 'status'], 'date', 'desc');
-  const orderBy: Prisma.InvoiceOrderByWithRelationInput[] = [
-    sort === 'number' ? { number: dir } : sort === 'client' ? { customer: { name: dir } } : sort === 'branch' ? { branch: { name: dir } } : sort === 'total' ? { total: dir } : sort === 'status' ? { status: dir } : { createdAt: sort === 'date' ? dir : 'desc' },
-    { createdAt: 'desc' },
-  ];
   const keep: Record<string, string> = Object.fromEntries(Object.entries({ q: s.q, status: s.status, branch: s.branch, from: s.from, to: s.to }).filter(([, v]) => v)) as Record<string, string>;
-  const [invoices0, branches, totals, dues] = await Promise.all([
-    db.invoice.findMany({ where, orderBy, take: 200, include: { customer: { select: { name: true, phone: true } }, branch: { select: { name: true } }, _count: { select: { items: true } } } }),
-    db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
-    db.invoice.aggregate({ where: { ...where, status: s.status ?? { not: 'Cancelled' } }, _sum: { total: true, paid: true }, _count: true }),
-    db.invoice.aggregate({ where: { status: { in: ['Unpaid', 'Partial'] } }, _sum: { total: true, paid: true }, _count: true }),
+  const [list, allBranches] = await Promise.all([
+    api<DataOf<typeof listInvoices>>('/invoices', { q: s.q?.trim(), status: s.status, branch: s.branch, from: s.from, to: s.to, sort, dir, limit: 200 }),
+    api<DataOf<typeof listBranches>>('/branches'),
   ]);
-  const dueOf = (i: { status: string; total: number; paid: number }) => (i.status === 'Cancelled' ? 0 : i.total - i.paid);
-  const invoices = sort === 'due' ? [...invoices0].sort((a, b) => (dir === 'asc' ? 1 : -1) * (dueOf(a) - dueOf(b))) : invoices0;
-  const outstanding = (dues._sum.total ?? 0) - (dues._sum.paid ?? 0);
+  const invoices = list.items;
+  const branches = allBranches.filter((b) => b.active);
+  const outstanding = list.outstanding;
 
   return (
     <>
@@ -43,9 +29,9 @@ export default async function BillingPage({ searchParams: s }: { searchParams: S
         actions={<Link href="/billing/new" className="rounded-xl bg-violet-600 px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm hover:bg-violet-700">Create New Bill (POS)</Link>}
       />
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <Stat label="Bills shown" value={totals._count} note="Cancelled bills excluded from totals" />
-        <Stat label="Billed" value={money0(totals._sum.total ?? 0)} note={`Collected ${money0(totals._sum.paid ?? 0)}`} />
-        <Stat label="Outstanding dues" value={money0(outstanding)} note={`Across ${plural(dues._count, 'bill')}`} tone={outstanding > 0.5 ? 'warn' : undefined} />
+        <Stat label="Bills shown" value={list.counted} note="Cancelled bills excluded from totals" />
+        <Stat label="Billed" value={money0(list.billed)} note={`Collected ${money0(list.collected)}`} />
+        <Stat label="Outstanding dues" value={money0(outstanding)} note={`Across ${plural(list.outstandingBills, 'bill')}`} tone={outstanding > 0.5 ? 'warn' : undefined} />
       </div>
       <form className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto_auto_auto]">
         {s.sort && <input type="hidden" name="sort" value={sort} />}

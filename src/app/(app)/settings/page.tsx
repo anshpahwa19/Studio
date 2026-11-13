@@ -1,4 +1,6 @@
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { getSettings, listBranches, listUsers } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { PageHeader } from '@/components/ui';
 import { SettingsForms } from './settings-forms';
@@ -6,9 +8,9 @@ import { SettingsForms } from './settings-forms';
 export default async function SettingsPage() {
   const me = await requirePage('settings');
   const [settings, branches, users] = await Promise.all([
-    db.settings.findUniqueOrThrow({ where: { id: 1 } }),
-    db.branch.findMany({ orderBy: { name: 'asc' } }),
-    db.user.findMany({ orderBy: [{ active: 'desc' }, { name: 'asc' }], select: { id: true, name: true, email: true, role: true, active: true } }),
+    api<DataOf<typeof getSettings>>('/settings'),
+    api<DataOf<typeof listBranches>>('/branches'),
+    api<DataOf<typeof listUsers>>('/users'),
   ]);
   return (
     <>

@@ -1,4 +1,6 @@
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { listAttendance, listStaff } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { canEdit } from '@/lib/roles';
 import { dayOfWeek, fmtDate, isoDate, monthEnd } from '@/lib/format';
@@ -19,8 +21,8 @@ export default async function AttendancePage({ searchParams }: { searchParams: {
   const to = view === 'month' ? monthEnd(from) : date;
 
   const [staff, records] = await Promise.all([
-    db.staff.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
-    db.attendance.findMany({ where: { date: { gte: from, lte: to } } }),
+    api<DataOf<typeof listStaff>>('/staff'),
+    api<DataOf<typeof listAttendance>>('/attendance', { from, to }),
   ]);
   const rows: Row[] = staff.map((s) => ({
     id: s.id, name: s.name, title: s.title, workDays: s.workDays.split(',').map(Number), startTime: s.startTime, endTime: s.endTime,

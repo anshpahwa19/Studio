@@ -101,6 +101,8 @@ route('POST', '/me/password', ({ b }) => settings.changeMyPassword(String(b.curr
 
 // ---- Reads (GET). Lists take ?q= and filters; see the README. Static paths come before /:id. ----
 route('GET', '/me', () => reads.me());
+route('GET', '/public/branding', () => reads.branding());
+route('GET', '/alerts', () => reads.alerts());
 route('GET', '/dashboard', () => reads.dashboard());
 route('GET', '/reports', ({ q }) => reads.report(q));
 route('GET', '/reports/export', ({ req }) => reportExport(req as NextRequest));

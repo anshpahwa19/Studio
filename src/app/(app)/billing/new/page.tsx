@@ -1,30 +1,31 @@
-import { db } from '@/lib/db';
-import { stockByBranch } from '@/lib/stock';
+import { api } from '@/lib/api-server';
+import type { getAppointment, getSettings, listBranches, listCustomers, listProducts, listServices, listStaff } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { PageHeader } from '@/components/ui';
 import { PosForm, type PosLine } from './pos-form';
 
 export default async function NewBillPage({ searchParams }: { searchParams: { customer?: string; appointment?: string } }) {
   await requirePage('billing');
-  const [customers, services, products, staff, branches, settings] = await Promise.all([
-    db.customer.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, phone: true } }),
-    db.service.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, price: true, duration: true, category: { select: { name: true } } } }),
-    db.product.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, price: true, stock: true, sku: true, category: true, unit: true } }),
-    db.staff.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    db.settings.findUniqueOrThrow({ where: { id: 1 }, select: { gstRate: true } }),
+  const [customerList, categories, productList, staffList, allBranches, settings] = await Promise.all([
+    api<DataOf<typeof listCustomers>>('/customers', { limit: 5000 }),
+    api<DataOf<typeof listServices>>('/services'),
+    api<DataOf<typeof listProducts>>('/products'),
+    api<DataOf<typeof listStaff>>('/staff'),
+    api<DataOf<typeof listBranches>>('/branches'),
+    api<DataOf<typeof getSettings>>('/settings'),
   ]);
-
-  const shelves = await stockByBranch(products.map((p) => p.id));
+  const customers = customerList.items.map((c) => ({ id: c.id, name: c.name, phone: c.phone }));
+  const services = categories.flatMap((c) => c.services.map((s) => ({ id: s.id, name: s.name, price: s.price, duration: s.duration, category: c.name }))).sort((a, b) => a.name.localeCompare(b.name));
+  const products = productList.items.map((p) => ({ id: p.id, name: p.name, price: p.price, stock: p.stock, sku: p.sku, category: p.category, unit: p.unit, byBranch: p.byBranch }));
+  const staff = staffList.map((s) => ({ id: s.id, name: s.name }));
+  const branches = allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }));
   let customerId = searchParams.customer ?? '';
   let branchId = branches[0]?.id ?? '';
   let lines: PosLine[] = [];
   let appointment: { id: string; label: string } | null = null;
   if (searchParams.appointment) {
-    const a = await db.appointment.findUnique({
-      where: { id: searchParams.appointment },
-      include: { services: true, invoice: { select: { id: true } } },
-    });
+    const a = await api<DataOf<typeof getAppointment>>(`/appointments/${searchParams.appointment}`).catch(() => null);
     if (a && !a.invoice) {
       customerId = a.customerId;
       branchId = a.branchId ?? branchId;
@@ -36,7 +37,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { cu
   return (
     <>
       <PageHeader title="Point of Sale (POS) Counter" subtitle={appointment ? 'Billing a completed appointment. Services are filled in from the booking.' : `Prices are before GST. GST at ${settings.gstRate}% is added after any discount, or turn it off for this bill.`} />
-      <PosForm gstRate={settings.gstRate} customers={customers} services={services.map((s) => ({ ...s, category: s.category.name }))} products={products.map((p) => ({ ...p, byBranch: Object.fromEntries(shelves.get(p.id) ?? []) }))} staff={staff} branches={branches}
+      <PosForm gstRate={settings.gstRate} customers={customers} services={services} products={products} staff={staff} branches={branches}
         initial={{ customerId, branchId, lines, appointmentId: appointment?.id ?? null }} />
     </>
   );

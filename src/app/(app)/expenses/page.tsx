@@ -1,4 +1,6 @@
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { expenseCategories, listBranches, listExpenses } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { fmtDate, isoDate, monthEnd, money0 } from '@/lib/format';
 import { Card, PageHeader } from '@/components/ui';
@@ -15,22 +17,20 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { f
   if (to < from) [from, to] = [to, from];
   const isMonth = from.endsWith('-01') && to === monthEnd(from);
   const periodLabel = isMonth ? fmtDate(from, { month: 'long', year: 'numeric' }) : from === to ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`;
-  const allBranches = await db.branch.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
+  const allBranches = (await api<DataOf<typeof listBranches>>('/branches')).map((b) => ({ id: b.id, name: b.name, active: b.active }));
   const branch = allBranches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
-  const inBranch = branch ? { branchId: branch } : {};
-  const [expenses, branches, used, monthAll] = await Promise.all([
-    db.expense.findMany({ where: { date: { gte: from, lte: to }, ...inBranch }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], include: { branch: { select: { name: true } } } }),
-    db.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    db.expense.findMany({ distinct: ['category'], select: { category: true } }),
-    db.expense.groupBy({ by: ['branchId'], where: { date: { gte: from, lte: to } }, _sum: { amount: true }, _count: true }),
+  const [{ items: expenses, byBranch: monthAll }, used] = await Promise.all([
+    api<DataOf<typeof listExpenses>>('/expenses', { from, to, branch }),
+    api<DataOf<typeof expenseCategories>>('/expenses/categories'),
   ]);
+  const branches = allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }));
   const perBranch = [...allBranches.map((b) => ({ id: b.id as string | null, name: b.name })), { id: null, name: 'Whole business' }]
-    .map((b) => ({ ...b, total: monthAll.find((m) => m.branchId === b.id)?._sum.amount ?? 0, count: monthAll.find((m) => m.branchId === b.id)?._count ?? 0 }))
+    .map((b) => ({ ...b, total: monthAll.find((m) => m.branchId === b.id)?.total ?? 0, count: monthAll.find((m) => m.branchId === b.id)?.count ?? 0 }))
     .filter((b) => b.id !== null || b.count > 0);
   const grand = perBranch.reduce((a, b) => a + b.total, 0);
   const byCategory = Object.entries(expenses.reduce<Record<string, number>>((a, e) => ({ ...a, [e.category]: (a[e.category] ?? 0) + e.amount }), {})).sort((a, b) => b[1] - a[1]);
   const total = expenses.reduce((a, e) => a + e.amount, 0);
-  const categories = [...new Set([...DEFAULT_CATEGORIES, ...used.map((u) => u.category)])].sort();
+  const categories = [...new Set([...DEFAULT_CATEGORIES, ...used])].sort();
 
   return (
     <>

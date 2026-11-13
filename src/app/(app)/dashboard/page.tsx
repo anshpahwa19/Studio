@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, CalendarCheck, CalendarDays, CalendarPlus, CheckCircle2, Clock, IndianRupee, Package, PackagePlus, Receipt, UserPlus, Users, Wallet } from 'lucide-react';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { dashboard } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { canView } from '@/lib/roles';
 import { addDays, fmtDate, fmtDateTime, fmtTime, isoDate, money0, plural, toMinutes } from '@/lib/format';
 import { ApptStatus, Card, Empty, IconTile, Pill, Stat, type IconTone } from '@/components/ui';
 import { SyncButton } from './sync-button';
-
-const start = (d: string) => new Date(`${d}T00:00:00`);
 
 export default async function Dashboard() {
   const user = await requirePage('dashboard');
@@ -15,31 +15,16 @@ export default async function Dashboard() {
   const stock = canView(user.role, 'inventory');
   const spend = canView(user.role, 'expenses');
   const today = isoDate();
-  const paidFilter = { invoice: { status: { not: 'Cancelled' } } };
-
-  const [settings, appts, paymentsToday, refundsToday, billsToday, lowStock, newClients, recent] = await Promise.all([
-    db.settings.findUniqueOrThrow({ where: { id: 1 } }),
-    db.appointment.findMany({
-      where: { date: today }, orderBy: { startTime: 'asc' },
-      include: { customer: { select: { id: true, name: true } }, staff: { select: { name: true } }, services: { select: { name: true } } },
-    }),
-    money ? db.payment.findMany({ where: { ...paidFilter, createdAt: { gte: start(today) } }, select: { amount: true } }) : [],
-    money ? db.refund.findMany({ where: { ...paidFilter, createdAt: { gte: start(today) } }, select: { amount: true } }) : [],
-    db.invoice.findMany({ where: { status: { not: 'Cancelled' }, createdAt: { gte: start(today) } }, select: { customerId: true, total: true, paid: true } }),
-    stock ? db.product.findMany({ where: { active: true }, select: { stock: true, reorderLevel: true } }) : [],
-    db.customer.count({ where: { active: true, createdAt: { gte: start(today) } } }),
-    money ? db.payment.findMany({ where: paidFilter, orderBy: { createdAt: 'desc' }, take: 6, include: { invoice: { select: { id: true, number: true, customer: { select: { name: true } } } } } }) : [],
-  ]);
-
-  // Collected today is payments in minus refunds out.
-  const collected = paymentsToday.reduce((a, p) => a + p.amount, 0) - refundsToday.reduce((a, r) => a + r.amount, 0);
+  const d = await api<DataOf<typeof dashboard>>('/dashboard');
+  const { salon: settings, appointments: { items: appts }, newClients, clientsToday } = d;
+  const collected = d.collectedToday ?? 0;
+  const billsToday = { length: d.billsToday ?? 0 };
+  const recent = d.recentPayments ?? [];
   const live = appts.filter((a) => !['Cancelled', 'NoShow'].includes(a.status));
-  const count = (s: string) => appts.filter((a) => a.status === s).length;
-  // Everything on the tiles is for today only: today's bookings, bills and payments.
-  const dueBills = billsToday.filter((i) => i.total - i.paid > 0.5);
-  const outstanding = dueBills.reduce((a, i) => a + i.total - i.paid, 0);
-  const low = lowStock.filter((p) => p.stock <= p.reorderLevel).length;
-  const clientsToday = new Set([...live.map((a) => a.customer.id), ...billsToday.map((i) => i.customerId)]).size;
+  const count = (st: string) => d.appointments.byStatus[st] ?? 0;
+  const outstanding = d.dueToday ?? 0;
+  const dueBills = { length: d.dueBillsToday ?? 0 };
+  const low = d.lowStock?.length ?? 0;
 
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();

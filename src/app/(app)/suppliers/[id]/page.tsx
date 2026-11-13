@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { getSupplier } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { canEdit } from '@/lib/roles';
 import { fmtDate, isoDate, money0 } from '@/lib/format';
@@ -11,17 +12,7 @@ import { BillsManager } from './bills-manager';
 
 export default async function SupplierPage({ params }: { params: { id: string } }) {
   const user = await requirePage('suppliers');
-  const s = await db.supplier.findUnique({
-    where: { id: params.id },
-    include: {
-      bills: {
-        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-        // Never load the uploaded file here; it is fetched on demand from /suppliers/bill-file/<id>.
-        select: { id: true, billNumber: true, date: true, dueDate: true, amount: true, paid: true, notes: true, supplierId: true, fileName: true, payments: { orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] } },
-      },
-    },
-  });
-  if (!s) notFound();
+  const s = await api<DataOf<typeof getSupplier>>(`/suppliers/${params.id}`);
   const billed = s.bills.reduce((a, b) => a + b.amount, 0);
   const paid = s.bills.reduce((a, b) => a + b.paid, 0);
   const due = s.bills.reduce((a, b) => a + dueOf(b), 0);
@@ -46,7 +37,7 @@ export default async function SupplierPage({ params }: { params: { id: string } 
         supplier={{ id: s.id, name: s.name }}
         today={today}
         editable={canEdit(user.role, 'suppliers')}
-        bills={s.bills.map((b) => ({ id: b.id, billNumber: b.billNumber, date: b.date, dueDate: b.dueDate, amount: b.amount, paid: b.paid, notes: b.notes, fileName: b.fileName, payments: b.payments.map((p) => ({ id: p.id, date: p.date, amount: p.amount, method: p.method, reference: p.reference })) }))}
+        bills={s.bills.map((b) => ({ id: b.id, billNumber: b.billNumber, date: b.date, dueDate: b.dueDate, amount: b.amount, paid: b.paid, notes: b.notes, fileName: b.fileName, payments: [...b.payments].reverse().map((p) => ({ id: p.id, date: p.date, amount: p.amount, method: p.method, reference: p.reference })) }))}
       />
       <p className="mt-3 text-[12.5px] text-ink-mute">{s.bills.length ? `Latest bill ${fmtDate(s.bills[0].date)}.` : ''} Payments recorded here are not added to Expenses automatically.</p>
     </>

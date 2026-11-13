@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { getCustomer, listBranches, listStaff } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { canEdit, canView, isSenior } from '@/lib/roles';
 import { fmtDate, fmtTime, money, money0 } from '@/lib/format';
@@ -9,25 +10,13 @@ import { EditCustomerButtons } from '../customer-buttons';
 
 export default async function CustomerPage({ params }: { params: { id: string } }) {
   const user = await requirePage('customers');
-  const c = await db.customer.findUnique({
-    where: { id: params.id },
-    include: {
-      preferredStaff: { select: { name: true } },
-      appointments: { orderBy: [{ date: 'desc' }, { startTime: 'desc' }], take: 50, include: { staff: { select: { name: true } }, services: true, branch: { select: { name: true } } } },
-      invoices: { orderBy: { createdAt: 'desc' }, take: 50, include: { branch: { select: { name: true } } } },
-    },
-  });
-  if (!c) notFound();
-  const [byApptBranch, byBillBranch, allBranches] = await Promise.all([
-    db.appointment.groupBy({ by: ['branchId'], where: { customerId: c.id, status: 'Completed', branchId: { not: null } }, _count: true, _max: { date: true } }),
-    db.invoice.groupBy({ by: ['branchId'], where: { customerId: c.id, status: { not: 'Cancelled' }, branchId: { not: null } }, _sum: { total: true } }),
-    db.branch.findMany({ select: { id: true, name: true, active: true } }),
+  const [c, staffList, allBranches] = await Promise.all([
+    api<DataOf<typeof getCustomer>>(`/customers/${params.id}`),
+    api<DataOf<typeof listStaff>>('/staff'),
+    api<DataOf<typeof listBranches>>('/branches'),
   ]);
-  const branchVisits = allBranches
-    .map((b) => ({ name: b.name, visits: byApptBranch.find((x) => x.branchId === b.id)?._count ?? 0, last: byApptBranch.find((x) => x.branchId === b.id)?._max.date ?? null, billed: byBillBranch.find((x) => x.branchId === b.id)?._sum.total ?? 0 }))
-    .filter((b) => b.visits || b.billed)
-    .sort((a, b) => b.billed - a.billed);
-  const staff = await db.staff.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
+  const branchVisits = c.branchVisits.map((b) => ({ name: b.name, visits: b.visits, last: b.lastVisit, billed: b.billed }));
+  const staff = staffList.map((s) => ({ id: s.id, name: s.name }));
   const live = c.invoices.filter((i) => i.status !== 'Cancelled');
   const billed = live.reduce((a, i) => a + i.total, 0);
   const due = live.reduce((a, i) => a + i.total - i.paid, 0);
@@ -79,7 +68,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
           <dl className="space-y-4">
             {[
               ['Hair', c.hairNotes], ['Nails', c.nailNotes], ['Notes', c.notes],
-              ['Branch', allBranches.find((b) => b.id === c.branchId)?.name], ['Preferred stylist', c.preferredStaff?.name], ['Birthday', c.birthday && fmtDate(c.birthday, { day: 'numeric', month: 'long' })],
+              ['Branch', c.branch?.name], ['Preferred stylist', c.preferredStaff?.name], ['Birthday', c.birthday && fmtDate(c.birthday, { day: 'numeric', month: 'long' })],
               ['Address', c.address], ['Gender', c.gender],
             ].map(([k, val]) => (
               <div key={k as string}>

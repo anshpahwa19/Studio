@@ -1,69 +1,33 @@
 import Link from 'next/link';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { listBranches, report } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
-import { addDays, fmtDate, isoDate, money0, parseDate, plural } from '@/lib/format';
+import { fmtDate, money0, plural } from '@/lib/format';
 import { BarChart } from '@/components/bar-chart';
 import { Card, Empty, Input, PageHeader, Stat, cx } from '@/components/ui';
-import { PRESETS, range, resolvePeriod } from './period';
+import { PRESETS, resolvePeriod } from './period';
 import { BranchSelect } from './branch-select';
 
 export default async function ReportsPage({ searchParams }: { searchParams: { period?: string; from?: string; to?: string; branch?: string } }) {
   await requirePage('reports');
   const { key, from, to } = resolvePeriod(searchParams);
-  const when = range(from, to);
-  const branches = await db.branch.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
+  const branches = await api<DataOf<typeof listBranches>>('/branches');
   // One branch, or everything combined when no branch is chosen.
   const branch = branches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
-  const inBranch = branch ? { branchId: branch } : {};
   const branchName = branches.find((b) => b.id === branch)?.name;
+  const r = await api<DataOf<typeof report>>('/reports', { from, to, branch });
 
-  const [invoices, rawPayments, refunds, expenses, staff] = await Promise.all([
-    db.invoice.findMany({ where: { createdAt: when, status: { not: 'Cancelled' }, ...inBranch }, include: { items: true } }),
-    db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } }, include: { invoice: { select: { branchId: true } } } }),
-    db.refund.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } }, include: { invoice: { select: { branchId: true } } } }),
-    db.expense.findMany({ where: { date: { gte: from, lte: to }, ...inBranch } }),
-    db.staff.findMany({ select: { id: true, name: true, payType: true, commissionRate: true, active: true } }),
-  ]);
-
-  // Money collected is payments received minus refunds given back, so a refund shows as a negative on its payment method.
-  const payments = [...rawPayments, ...refunds.map((r) => ({ ...r, amount: -r.amount }))];
-  const sales = sum(invoices.map((i) => i.total));
-  const tax = sum(invoices.map((i) => i.tax));
-  const net = sales - tax;
-  const collected = sum(payments.map((p) => p.amount));
-  const spent = sum(expenses.map((e) => e.amount));
-  const dues = sum(invoices.map((i) => i.total - i.paid));
-  const discounts = sum(invoices.map((i) => i.discount));
-
-  // Sales before GST over time, by day for short ranges and by month for long ones.
-  const days = Math.round((parseDate(to).getTime() - parseDate(from).getTime()) / 86400000) + 1;
-  const byMonth = days > 62;
-  const buckets = new Map<string, number>();
-  if (byMonth) for (let d = from; d <= to; d = addDays(d, 28)) buckets.set(d.slice(0, 7), 0);
-  else for (let i = 0; i < days; i++) buckets.set(addDays(from, i), 0);
-  if (byMonth) buckets.set(to.slice(0, 7), buckets.get(to.slice(0, 7)) ?? 0);
-  for (const i of invoices) {
-    const k = byMonth ? isoDate(i.createdAt).slice(0, 7) : isoDate(i.createdAt);
-    buckets.set(k, (buckets.get(k) ?? 0) + i.total - i.tax);
-  }
-  const chart = [...buckets].map(([k, value]) => ({ label: byMonth ? fmtDate(`${k}-01`, { month: 'short' }) : fmtDate(k, { day: 'numeric', month: 'short' }), value }));
-
-  const items = invoices.flatMap((i) => i.items);
-  const top = (kind: string) => group(items.filter((i) => i.kind === kind), (i) => i.name, (i) => ({ qty: i.qty, value: i.total - i.tax })).slice(0, 8);
-  const methods = group(payments, (p) => p.method, (p) => ({ qty: 1, value: p.amount }));
-  const expenseCats = group(expenses, (e) => e.category, (e) => ({ qty: 1, value: e.amount }));
-  const staffMap = new Map(staff.map((s) => [s.id, s]));
-  const perf = group(items.filter((i) => i.kind === 'service' && i.staffId), (i) => i.staffId!, (i) => ({ qty: i.qty, value: i.total - i.tax }))
-    .map((r) => { const s = staffMap.get(r.key); return { ...r, name: s?.name ?? 'Former staff', rate: s?.commissionRate ?? 0, salaried: s?.payType === 'Salary' }; });
-
-  // Side-by-side figures for each branch, shown when all branches are combined.
-  const compare = branch || branches.length === 0 ? [] : [...branches.map((b) => ({ id: b.id as string | null, name: b.name })), { id: null, name: 'Not assigned to a branch' }].map((b) => {
-    const inv = invoices.filter((i) => i.branchId === b.id);
-    const bNet = sum(inv.map((i) => i.total - i.tax));
-    const bSpent = sum(expenses.filter((e) => e.branchId === b.id).map((e) => e.amount));
-    const bCollected = sum(rawPayments.filter((p) => p.invoice.branchId === b.id).map((p) => p.amount)) - sum(refunds.filter((r) => r.invoice.branchId === b.id).map((r) => r.amount));
-    return { ...b, bills: inv.length, net: bNet, spent: bSpent, profit: bNet - bSpent, collected: bCollected };
-  }).filter((r) => r.id !== null || r.bills || r.spent || r.collected);
+  const net = r.netSales, spent = r.expenses, tax = r.tax, collected = r.collected, dues = r.dues, discounts = r.discounts;
+  const invoices = { length: r.bills };
+  const expenses = { length: r.expenseCount };
+  const byMonth = r.salesBy === 'month';
+  const chart = r.salesSeries.map(({ date, value }) => ({ label: byMonth ? fmtDate(`${date}-01`, { month: 'short' }) : fmtDate(date, { day: 'numeric', month: 'short' }), value }));
+  const top = (kind: string) => (kind === 'service' ? r.topServices : r.topProducts);
+  const methods = r.paymentMethods;
+  const expenseCats = r.expenseCategories;
+  const perf = r.staffPerformance.map((p) => ({ key: p.staffId, qty: p.qty, value: p.value, name: p.name, rate: p.commissionRate, salaried: p.salaried }));
+  const compare = r.branchComparison.map((b) => ({ id: b.branchId, name: b.name, bills: b.bills, net: b.netSales, spent: b.expenses, profit: b.profit, collected: b.collected }));
 
   const qs = `${key === 'custom' ? `from=${from}&to=${to}` : `period=${key}`}${branch ? `&branch=${branch}` : ''}`;
   const periodQs = branch ? `&branch=${branch}` : '';
@@ -171,16 +135,4 @@ function Breakdown({ title, rows, qtyLabel }: { title: string; rows: { key: stri
       )}
     </Card>
   );
-}
-
-const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
-function group<T>(xs: T[], key: (x: T) => string, val: (x: T) => { qty: number; value: number }) {
-  const m = new Map<string, { key: string; qty: number; value: number }>();
-  for (const x of xs) {
-    const k = key(x);
-    const v = val(x);
-    const cur = m.get(k) ?? { key: k, qty: 0, value: 0 };
-    m.set(k, { key: k, qty: cur.qty + v.qty, value: cur.value + v.value });
-  }
-  return [...m.values()].sort((a, b) => b.value - a.value);
 }

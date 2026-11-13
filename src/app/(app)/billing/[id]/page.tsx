@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { ArrowLeft, Scissors } from 'lucide-react';
-import { db } from '@/lib/db';
+import { api } from '@/lib/api-server';
+import type { getInvoice, getSettings } from '@/lib/api-reads';
+import type { DataOf } from '@/lib/api-client';
 import { requirePage } from '@/lib/session';
 import { isSenior } from '@/lib/roles';
 import { fmtDate, fmtDateTime, money, rupeesInWords } from '@/lib/format';
@@ -11,13 +12,9 @@ import { InvoiceActions } from './invoice-actions';
 export default async function InvoicePage({ params }: { params: { id: string } }) {
   const user = await requirePage('billing');
   const [inv, s] = await Promise.all([
-    db.invoice.findUnique({
-      where: { id: params.id },
-      include: { customer: true, branch: true, items: { include: { staff: { select: { name: true } } } }, payments: { orderBy: { createdAt: 'asc' } }, refunds: { orderBy: { createdAt: 'asc' } } },
-    }),
-    db.settings.findUnique({ where: { id: 1 } }),
+    api<DataOf<typeof getInvoice>>(`/invoices/${params.id}`),
+    api<DataOf<typeof getSettings>>('/settings'),
   ]);
-  if (!inv || !s) notFound();
   const due = inv.total - inv.paid;
   const gst = inv.tax > 0;
   const rate = inv.items[0]?.taxRate ?? 0;
