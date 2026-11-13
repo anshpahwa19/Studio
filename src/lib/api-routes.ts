@@ -113,16 +113,24 @@ route('GET', '/attendance', ({ q }) => reads.listAttendance(q));
 route('GET', '/invoices', ({ q }) => reads.listInvoices(q));
 route('GET', '/invoices/:id', ({ p }) => reads.getInvoice(p.id));
 route('GET', '/products', ({ q }) => reads.listProducts(q));
+route('GET', '/products/:id', ({ p }) => reads.getProduct(p.id));
+route('GET', '/stock/monthly', ({ q }) => reads.monthlyStock(q));
 route('GET', '/stock/movements', ({ q }) => reads.listStockMovements(q));
 route('GET', '/services', ({ q }) => reads.listServices(q));
+route('GET', '/services/:id', ({ p }) => reads.getService(p.id));
 route('GET', '/staff', ({ q }) => reads.listStaff(q));
+route('GET', '/staff/:id', ({ p }) => reads.getStaff(p.id));
 route('GET', '/suppliers', () => reads.listSuppliers());
 route('GET', '/suppliers/:id', ({ p }) => reads.getSupplier(p.id));
 route('GET', '/supplier-bills/:id/file', ({ p, req }) => billFile(req, { params: { id: p.id } }));
 route('GET', '/expenses', ({ q }) => reads.listExpenses(q));
+route('GET', '/expenses/categories', () => reads.expenseCategories());
+route('GET', '/expenses/:id', ({ p }) => reads.getExpense(p.id));
 route('GET', '/branches', () => reads.listBranches());
+route('GET', '/branches/:id', ({ p }) => reads.getBranch(p.id));
 route('GET', '/settings', () => reads.getSettings());
 route('GET', '/users', () => reads.listUsers());
+route('GET', '/users/:id', ({ p }) => reads.getUser(p.id));
 
 function toForm(b: Record<string, unknown>) {
   const f = new FormData();

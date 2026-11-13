@@ -80,24 +80,25 @@ Lists accept `?q=` to search, `?limit=` (up to 500) and `?offset=`, plus the fil
 |---|---|
 | `GET /me` | The signed-in user |
 | `GET /dashboard` | Today's appointments, bills, money collected, new clients, low stock |
-| `GET /reports?period=today\|week\|month\|lastmonth\|year` or `?from=&to=`, `&branch=` | Sales, GST, collections, expenses, profit, daily series, top services and products, payment methods, staff performance |
+| `GET /reports?period=today\|week\|month\|lastmonth\|year` or `?from=&to=`, `&branch=` | Sales, GST, collections, expenses, profit, daily series, top services and products, payment methods, staff performance, branch comparison |
 | `GET /reports/export?type=invoices\|expenses&…` | CSV download |
 | `GET /customers?q=&branch=&archived=1` | Clients with visits, last visit, billed and due |
-| `GET /customers/:id` | One client with appointments and bills |
+| `GET /customers/:id` | One client with appointments, bills and a per-branch visit breakdown |
 | `GET /customers/export?q=&branch=&template=1` | CSV download |
 | `GET /appointments?date=` or `?from=&to=` or `?view=week&date=`, `&staffId=&branch=&customerId=&status=` | Appointments with services |
 | `GET /appointments/:id` | One appointment |
 | `GET /attendance?date=` or `?month=YYYY-MM` or `?from=&to=`, `&staffId=` | Punch records |
 | `GET /invoices?q=&status=&branch=&customerId=&from=&to=` | Bills, with billed and collected totals |
 | `GET /invoices/:id` | One bill with items, payments and refunds |
-| `GET /products?q=&branch=&low=1&archived=1` | Products with stock per branch and stock value |
+| `GET /products?q=&branch=&low=1&archived=1`, `GET /products/:id` | Products with stock per branch and stock value |
+| `GET /stock/monthly?month=YYYY-MM&branch=` | Per product: opening, received, sold, used, corrections, transfers, closing; plus the month's deliveries |
 | `GET /stock/movements?productId=&branch=&type=&from=&to=` | Stock history |
-| `GET /services?archived=1` | Categories with their services |
-| `GET /staff?archived=1` | Staff (pay details only for owners and managers) |
+| `GET /services?archived=1`, `GET /services/:id` | Categories with their services; one service |
+| `GET /staff?archived=1`, `GET /staff/:id` | Staff with upcoming bookings (pay details only for owners and managers) |
 | `GET /suppliers`, `GET /suppliers/:id` | Suppliers with billed and due; one supplier with bills and payments |
 | `GET /supplier-bills/:id/file` | The uploaded bill photo or PDF |
-| `GET /expenses?from=&to=&branch=&category=` | Expenses with a total |
-| `GET /branches`, `GET /settings`, `GET /users` | Business setup (`/users` is for the owner) |
+| `GET /expenses?from=&to=&branch=&category=`, `GET /expenses/:id`, `GET /expenses/categories` | Expenses with a total; one expense; categories used so far |
+| `GET /branches`, `/branches/:id`, `GET /settings`, `GET /users`, `/users/:id` | Business setup (users are for the owner) |
 
 ## Live version on Claude
 

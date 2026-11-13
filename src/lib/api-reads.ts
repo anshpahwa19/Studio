@@ -75,7 +75,17 @@ export const getCustomer = (id: string) =>
       db.appointment.findMany({ where: { customerId: id }, orderBy: [{ date: 'desc' }, { startTime: 'desc' }], take: 50, include: { staff: { select: { name: true } }, branch: { select: { name: true } }, services: { select: { name: true, price: true } } } }),
       db.invoice.findMany({ where: { customerId: id }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, number: true, status: true, total: true, paid: true, refunded: true, createdAt: true, branch: { select: { name: true } } } }),
     ]);
-    return { ...c, appointments, invoices };
+    const [byAppt, byBill, branches] = await Promise.all([
+      db.appointment.groupBy({ by: ['branchId'], where: { customerId: id, status: 'Completed', branchId: { not: null } }, _count: true, _max: { date: true } }),
+      db.invoice.groupBy({ by: ['branchId'], where: { customerId: id, status: { not: 'Cancelled' }, branchId: { not: null } }, _sum: { total: true } }),
+      db.branch.findMany({ select: { id: true, name: true } }),
+    ]);
+    const branchVisits = branches
+      .map((b) => ({ branchId: b.id, name: b.name, visits: byAppt.find((x) => x.branchId === b.id)?._count ?? 0, lastVisit: byAppt.find((x) => x.branchId === b.id)?._max.date ?? null, billed: round2(byBill.find((x) => x.branchId === b.id)?._sum.total ?? 0) }))
+      .filter((b) => b.visits || b.billed)
+      .sort((a, b) => b.billed - a.billed);
+    const live = invoices.filter((i) => i.status !== 'Cancelled');
+    return { ...c, appointments, invoices, branchVisits, billed: round2(sum(live.map((i) => i.total))), due: round2(sum(live.map((i) => i.total - i.paid))), visits: appointments.filter((a) => a.status === 'Completed').length };
   });
 
 // ---- Appointments ----
@@ -173,6 +183,40 @@ export const listStockMovements = (q: Q) =>
     });
   });
 
+export const getProduct = (id: string) =>
+  read('inventory', async () => {
+    const p = await db.product.findUnique({ where: { id }, include: { supplierRef: { select: { name: true } } } });
+    if (!p) throw new ActionError('Product not found.', 404);
+    const { supplierRef, ...rest } = p;
+    return { ...rest, supplierName: supplierRef?.name ?? null, byBranch: Object.fromEntries((await stockByBranch([id])).get(id) ?? []) };
+  });
+
+/** One month of stock per product: opening count, received, sold, used, corrections, transfers and closing count. */
+export const monthlyStock = (q: Q) =>
+  read('inventory', async () => {
+    const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(str(q, 'month') ?? '') ? str(q, 'month')! : isoDate().slice(0, 7);
+    const branch = str(q, 'branch');
+    const inBranch = branch ? { branchId: branch } : {};
+    const from = parseDate(`${month}-01`);
+    const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+    const [products, before, during, received] = await Promise.all([
+      db.product.findMany({ orderBy: { name: 'asc' } }),
+      db.stockMovement.groupBy({ by: ['productId'], where: { createdAt: { lt: from }, ...inBranch }, _sum: { change: true } }),
+      db.stockMovement.groupBy({ by: ['productId', 'type'], where: { createdAt: { gte: from, lt: to }, ...inBranch }, _sum: { change: true } }),
+      db.stockMovement.findMany({ where: { type: 'IN', createdAt: { gte: from, lt: to }, ...inBranch }, orderBy: { createdAt: 'desc' }, include: { product: { select: { name: true, unit: true } }, supplier: { select: { name: true } }, branch: { select: { name: true } } } }),
+    ]);
+    const opening = new Map(before.map((b) => [b.productId, b._sum.change ?? 0]));
+    const total = (id: string, ...types: string[]) => sum(during.filter((m) => m.productId === id && types.includes(m.type)).map((m) => m._sum.change ?? 0));
+    const items = products
+      .map((p) => {
+        const open = opening.get(p.id) ?? 0;
+        const inn = total(p.id, 'IN'), sold = total(p.id, 'SALE', 'RETURN'), used = total(p.id, 'OUT'), corrections = total(p.id, 'ADJUST'), transfers = total(p.id, 'TRANSFER');
+        return { productId: p.id, name: p.name, unit: p.unit, active: p.active, opening: open, received: inn, sold: -sold, used: -used, corrections, transfers, closing: open + inn + sold + used + corrections + transfers };
+      })
+      .filter((r) => r.active || r.opening || r.received || r.sold || r.used || r.corrections || r.transfers);
+    return { month, branch: branch ?? null, items, receipts: received };
+  });
+
 // ---- Services, staff ----
 export const listServices = (q: Q) =>
   read('services', async () => {
@@ -184,8 +228,26 @@ export const listStaff = (q: Q) =>
   read('appointments', async (user) => {
     // Stylists and receptionists need the list to book; pay details are for owners and managers only.
     const full = canView(user.role, 'staff');
-    const rows = await db.staff.findMany({ where: q.get('archived') === '1' ? {} : { active: true }, orderBy: { name: 'asc' } });
-    return rows.map((s) => (full ? s : { id: s.id, name: s.name, title: s.title, workDays: s.workDays, startTime: s.startTime, endTime: s.endTime, active: s.active }));
+    const [rows, upcoming] = await Promise.all([
+      db.staff.findMany({ where: q.get('archived') === '1' ? {} : { active: true }, orderBy: { name: 'asc' } }),
+      db.appointment.groupBy({ by: ['staffId'], where: { status: 'Booked', date: { gte: isoDate() } }, _count: true }),
+    ]);
+    const n = new Map(upcoming.map((u) => [u.staffId, u._count]));
+    return rows.map((s) => (full ? { ...s, upcoming: n.get(s.id) ?? 0 } : { id: s.id, name: s.name, title: s.title, workDays: s.workDays, startTime: s.startTime, endTime: s.endTime, active: s.active, upcoming: n.get(s.id) ?? 0 }));
+  });
+
+export const getStaff = (id: string) =>
+  read('staff', async () => {
+    const s = await db.staff.findUnique({ where: { id } });
+    if (!s) throw new ActionError('Staff member not found.', 404);
+    return { ...s, upcoming: await db.appointment.count({ where: { staffId: id, status: 'Booked', date: { gte: isoDate() } } }) };
+  });
+
+export const getService = (id: string) =>
+  read('services', async () => {
+    const x = await db.service.findUnique({ where: { id }, include: { category: { select: { name: true } } } });
+    if (!x) throw new ActionError('Service not found.', 404);
+    return x;
   });
 
 // ---- Suppliers ----
@@ -231,8 +293,30 @@ export const listExpenses = (q: Q) =>
     return { from, to, total: round2(sum(items.map((e) => e.amount))), items };
   });
 
+export const getExpense = (id: string) =>
+  read('expenses', async () => {
+    const x = await db.expense.findUnique({ where: { id }, include: { branch: { select: { name: true } } } });
+    if (!x) throw new ActionError('Expense not found.', 404);
+    return x;
+  });
+
+export const expenseCategories = () => read('expenses', async () => (await db.expense.findMany({ distinct: ['category'], select: { category: true }, orderBy: { category: 'asc' } })).map((c) => c.category));
+
 // ---- Settings ----
 export const listBranches = () => attempt(async () => { await requireView('dashboard'); return db.branch.findMany({ orderBy: { name: 'asc' } }); });
+export const getBranch = (id: string) =>
+  attempt(async () => {
+    await requireView('dashboard');
+    const b = await db.branch.findUnique({ where: { id } });
+    if (!b) throw new ActionError('Branch not found.', 404);
+    return b;
+  });
+export const getUser = (id: string) =>
+  read('settings', async () => {
+    const u = await db.user.findUnique({ where: { id }, select: { id: true, name: true, email: true, role: true, active: true } });
+    if (!u) throw new ActionError('Login not found.', 404);
+    return u;
+  });
 export const getSettings = () => read('dashboard', () => db.settings.findUniqueOrThrow({ where: { id: 1 } }));
 export const listUsers = () => read('settings', () => db.user.findMany({ orderBy: [{ active: 'desc' }, { name: 'asc' }], select: { id: true, name: true, email: true, role: true, active: true } }));
 
@@ -268,13 +352,22 @@ export const report = (q: Q) =>
     const when = range(from, to);
     const branch = str(q, 'branch');
     const inBranch = branch ? { branchId: branch } : {};
-    const [invoices, payments, refunds, expenses, staff] = await Promise.all([
+    const [invoices, payments, refunds, expenses, staff, branches] = await Promise.all([
       db.invoice.findMany({ where: { createdAt: when, status: { not: 'Cancelled' }, ...inBranch }, include: { items: true } }),
-      db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } } }),
-      db.refund.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } } }),
+      db.payment.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } }, include: { invoice: { select: { branchId: true } } } }),
+      db.refund.findMany({ where: { createdAt: when, invoice: { status: { not: 'Cancelled' }, ...inBranch } }, include: { invoice: { select: { branchId: true } } } }),
       db.expense.findMany({ where: { date: { gte: from, lte: to }, ...inBranch } }),
       db.staff.findMany({ select: { id: true, name: true, payType: true, commissionRate: true } }),
+      db.branch.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     ]);
+    // Side by side figures per branch, when all branches are combined.
+    const compare = branch ? [] : [...branches.map((b) => ({ id: b.id as string | null, name: b.name })), { id: null, name: 'Not assigned to a branch' }].map((b) => {
+      const inv = invoices.filter((i) => i.branchId === b.id);
+      const net = sum(inv.map((i) => i.total - i.tax));
+      const spentHere = sum(expenses.filter((e) => e.branchId === b.id).map((e) => e.amount));
+      const collected = sum(payments.filter((p) => p.invoice.branchId === b.id).map((p) => p.amount)) - sum(refunds.filter((r) => r.invoice.branchId === b.id).map((r) => r.amount));
+      return { branchId: b.id, name: b.name, bills: inv.length, netSales: round2(net), expenses: round2(spentHere), profit: round2(net - spentHere), collected: round2(collected) };
+    }).filter((r) => r.branchId !== null || r.bills || r.expenses || r.collected);
     const group = <T>(rows: T[], key: (r: T) => string, val: (r: T) => { qty: number; value: number }) => {
       const m = new Map<string, { key: string; qty: number; value: number }>();
       for (const r of rows) { const k = key(r); const v = val(r); const cur = m.get(k) ?? { key: k, qty: 0, value: 0 }; cur.qty += v.qty; cur.value += v.value; m.set(k, cur); }
@@ -301,6 +394,7 @@ export const report = (q: Q) =>
       topProducts: group(items.filter((i) => i.kind === 'product'), (i) => i.name, (i) => ({ qty: i.qty, value: i.total - i.tax })).slice(0, 8),
       paymentMethods: group([...payments, ...refunds.map((r) => ({ ...r, amount: -r.amount }))], (p) => p.method, (p) => ({ qty: 1, value: p.amount })),
       expenseCategories: group(expenses, (e) => e.category, (e) => ({ qty: 1, value: e.amount })),
+      branchComparison: compare,
       staffPerformance: group(items.filter((i) => i.kind === 'service' && i.staffId), (i) => i.staffId!, (i) => ({ qty: i.qty, value: i.total - i.tax }))
         .map(({ key: id, ...r }) => ({ staffId: id, name: staffById.get(id)?.name ?? 'Former staff', commissionRate: staffById.get(id)?.commissionRate ?? 0, salaried: staffById.get(id)?.payType === 'Salary', ...r })),
     };
