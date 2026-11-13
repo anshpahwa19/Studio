@@ -18,7 +18,8 @@ async function handle(req: Request, { params }: { params: { path?: string[] } })
     return NextResponse.json({ ok: false, error: 'The request body could not be read.' }, { status: 400 });
   }
 
-  const result = await found.run({ p: found.p, b, form });
+  const result = await found.run({ p: found.p, q: new URL(req.url).searchParams, b, form, req });
+  if (result instanceof Response) return result;
   const { status, ...body } = result as typeof result & { status?: number };
   return NextResponse.json(body, { status: result.ok ? 200 : status ?? 400 });
 }

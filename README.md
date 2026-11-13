@@ -49,7 +49,7 @@ Data is kept in `~/.config/Salon Studio/salon.db` on Linux and `%APPDATA%\Salon 
 
 ## API
 
-Every change the app makes (new client, stock in, bill, payment, and so on) goes through a REST API under `/api`.
+Everything the app does goes through a REST API under `/api`: every change (new client, stock in, bill, payment) and every read.
 The screens call it, and so can any other client. The code that does the work is in each feature's `service.ts`;
 the routes are listed in `src/lib/api-routes.ts`.
 
@@ -70,6 +70,34 @@ other clients send it as `Authorization: Bearer <token>`. Replies are `{ "ok": t
 | Suppliers | `POST /suppliers`, `PUT /suppliers/:id`, `POST /suppliers/:id/active`, `POST /supplier-bills` (form upload), `PUT` / `DELETE /supplier-bills/:id`, `POST /supplier-payments`, `DELETE /supplier-payments/:id` |
 | Expenses | `POST /expenses`, `PUT /expenses/:id`, `DELETE /expenses/:id` |
 | Settings | `PUT /settings`, `POST /branches`, `PUT` / `DELETE /branches/:id`, `POST /users`, `PUT` / `DELETE /users/:id`, `POST /me/password` |
+
+### Reading data (GET)
+
+Lists accept `?q=` to search, `?limit=` (up to 500) and `?offset=`, plus the filters shown. Dates are `YYYY-MM-DD`.
+`branch` is a branch id. Every read follows the same role rules as the screens.
+
+| Endpoint | Returns |
+|---|---|
+| `GET /me` | The signed-in user |
+| `GET /dashboard` | Today's appointments, bills, money collected, new clients, low stock |
+| `GET /reports?period=today\|week\|month\|lastmonth\|year` or `?from=&to=`, `&branch=` | Sales, GST, collections, expenses, profit, daily series, top services and products, payment methods, staff performance |
+| `GET /reports/export?type=invoices\|expenses&…` | CSV download |
+| `GET /customers?q=&branch=&archived=1` | Clients with visits, last visit, billed and due |
+| `GET /customers/:id` | One client with appointments and bills |
+| `GET /customers/export?q=&branch=&template=1` | CSV download |
+| `GET /appointments?date=` or `?from=&to=` or `?view=week&date=`, `&staffId=&branch=&customerId=&status=` | Appointments with services |
+| `GET /appointments/:id` | One appointment |
+| `GET /attendance?date=` or `?month=YYYY-MM` or `?from=&to=`, `&staffId=` | Punch records |
+| `GET /invoices?q=&status=&branch=&customerId=&from=&to=` | Bills, with billed and collected totals |
+| `GET /invoices/:id` | One bill with items, payments and refunds |
+| `GET /products?q=&branch=&low=1&archived=1` | Products with stock per branch and stock value |
+| `GET /stock/movements?productId=&branch=&type=&from=&to=` | Stock history |
+| `GET /services?archived=1` | Categories with their services |
+| `GET /staff?archived=1` | Staff (pay details only for owners and managers) |
+| `GET /suppliers`, `GET /suppliers/:id` | Suppliers with billed and due; one supplier with bills and payments |
+| `GET /supplier-bills/:id/file` | The uploaded bill photo or PDF |
+| `GET /expenses?from=&to=&branch=&category=` | Expenses with a total |
+| `GET /branches`, `GET /settings`, `GET /users` | Business setup (`/users` is for the owner) |
 
 ## Live version on Claude
 

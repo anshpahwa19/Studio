@@ -10,12 +10,18 @@ import * as settings from '@/app/(app)/settings/service';
 import * as staff from '@/app/(app)/staff/service';
 import * as suppliers from '@/app/(app)/suppliers/service';
 import * as supplierBills from '@/app/(app)/suppliers/[id]/service';
+import * as reads from './api-reads';
+import { GET as customerExport } from '@/app/(app)/customers/export/route';
+import { GET as reportExport } from '@/app/(app)/reports/export/route';
+import { GET as billFile } from '@/app/(app)/suppliers/bill-file/[id]/route';
+import type { NextRequest } from 'next/server';
 import { attempt, type Result } from './action';
 import { login, logout } from './auth';
 
-/** What a route handler gets: URL parameters, the JSON body (or {}), and the form when the upload is multipart. */
-type Ctx = { p: Record<string, string>; b: any; form: FormData | null };
-type Handler = (c: Ctx) => Promise<Result<any>>;
+/** What a route handler gets: URL parameters, ?query values, the JSON body (or {}), and the form when the upload is multipart. */
+type Ctx = { p: Record<string, string>; q: URLSearchParams; b: any; form: FormData | null; req: Request };
+/** Most routes answer with a Result; file downloads (CSV, bill photos) answer with a Response. */
+type Handler = (c: Ctx) => Promise<Result<any> | Response>;
 
 const routes: { method: string; parts: string[]; run: Handler }[] = [];
 const route = (method: string, path: string, run: Handler) => routes.push({ method, parts: path.split('/').filter(Boolean), run });
@@ -92,6 +98,31 @@ route('POST', '/users', ({ b }) => settings.saveUser(b));
 route('PUT', '/users/:id', ({ p, b }) => settings.saveUser({ ...b, id: p.id }));
 route('DELETE', '/users/:id', ({ p }) => settings.deleteUser(p.id));
 route('POST', '/me/password', ({ b }) => settings.changeMyPassword(String(b.current ?? ''), String(b.next ?? '')));
+
+// ---- Reads (GET). Lists take ?q= and filters; see the README. Static paths come before /:id. ----
+route('GET', '/me', () => reads.me());
+route('GET', '/dashboard', () => reads.dashboard());
+route('GET', '/reports', ({ q }) => reads.report(q));
+route('GET', '/reports/export', ({ req }) => reportExport(req as NextRequest));
+route('GET', '/customers', ({ q }) => reads.listCustomers(q));
+route('GET', '/customers/export', ({ req }) => customerExport(req as NextRequest));
+route('GET', '/customers/:id', ({ p }) => reads.getCustomer(p.id));
+route('GET', '/appointments', ({ q }) => reads.listAppointments(q));
+route('GET', '/appointments/:id', ({ p }) => reads.getAppointment(p.id));
+route('GET', '/attendance', ({ q }) => reads.listAttendance(q));
+route('GET', '/invoices', ({ q }) => reads.listInvoices(q));
+route('GET', '/invoices/:id', ({ p }) => reads.getInvoice(p.id));
+route('GET', '/products', ({ q }) => reads.listProducts(q));
+route('GET', '/stock/movements', ({ q }) => reads.listStockMovements(q));
+route('GET', '/services', ({ q }) => reads.listServices(q));
+route('GET', '/staff', ({ q }) => reads.listStaff(q));
+route('GET', '/suppliers', () => reads.listSuppliers());
+route('GET', '/suppliers/:id', ({ p }) => reads.getSupplier(p.id));
+route('GET', '/supplier-bills/:id/file', ({ p, req }) => billFile(req, { params: { id: p.id } }));
+route('GET', '/expenses', ({ q }) => reads.listExpenses(q));
+route('GET', '/branches', () => reads.listBranches());
+route('GET', '/settings', () => reads.getSettings());
+route('GET', '/users', () => reads.listUsers());
 
 function toForm(b: Record<string, unknown>) {
   const f = new FormData();
