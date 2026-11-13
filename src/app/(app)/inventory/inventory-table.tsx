@@ -7,7 +7,7 @@ import { useAction } from '@/client/use-action';
 import { fmtDateTime, isoDate, money } from '@/lib/format';
 import { SortTh, useSort } from '@/components/sort-button';
 import { toast } from '@/components/toast';
-import { deleteProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from './api';
+import { deleteProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from '@/client/api/inventory';
 
 type Product = { id: string; name: string; sku: string | null; category: string; supplierId: string | null; supplierName: string | null; costPrice: number; price: number; stock: number; byBranch: Record<string, number>; reorderLevel: number; unit: string };
 type Branch = { id: string; name: string };

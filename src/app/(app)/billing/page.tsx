@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { api } from '@/server/api/fetch';
 import type { listBranches } from '@/server/features/settings/queries';
 import type { listInvoices } from '@/server/features/billing/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { fmtDate, money, money0, plural } from '@/lib/format';
 import { SortHead, readSort } from '@/components/sort-head';

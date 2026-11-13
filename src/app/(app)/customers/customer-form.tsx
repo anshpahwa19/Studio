@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button, Field, Input, Select, Textarea } from '@/components/ui';
 import { toast } from '@/components/toast';
 import { useAction } from '@/client/use-action';
-import { saveCustomer, type CustomerInput } from './api';
+import { saveCustomer, type CustomerInput } from '@/client/api/customers';
 import { phoneProps } from '@/lib/validate';
 
 export type StaffOption = { id: string; name: string };

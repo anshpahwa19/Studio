@@ -5,7 +5,7 @@ import type { listCustomers } from '@/server/features/customers/queries';
 import type { listProducts } from '@/server/features/inventory/queries';
 import type { listServices } from '@/server/features/services/queries';
 import type { listStaff } from '@/server/features/staff/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { PageHeader } from '@/components/ui';
 import { PosForm, type PosLine } from './pos-form';

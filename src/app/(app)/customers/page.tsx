@@ -3,7 +3,7 @@ import { api } from '@/server/api/fetch';
 import type { listBranches } from '@/server/features/settings/queries';
 import type { listCustomers } from '@/server/features/customers/queries';
 import type { listStaff } from '@/server/features/staff/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { canEdit } from '@/lib/roles';
 import { fmtDate, money0, plural } from '@/lib/format';

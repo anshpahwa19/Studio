@@ -1,6 +1,6 @@
 import { api } from '@/server/api/fetch';
 import type { monthlyStock } from '@/server/features/inventory/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { fmtDate, parseDate } from '@/lib/format';
 import { Card, Empty, PageHeader, Stat } from '@/components/ui';
 import { MonthPicker } from './month-picker';

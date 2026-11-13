@@ -2,7 +2,7 @@ import { currentUser } from '@/server/auth/session';
 import { redirect } from 'next/navigation';
 import { api } from '@/server/api/fetch';
 import type { alerts as alertsFn } from '@/server/features/dashboard/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { canView, type Area } from '@/lib/roles';
 import { plural } from '@/lib/format';
 import { Shell } from '@/components/sidebar';

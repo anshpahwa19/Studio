@@ -5,7 +5,7 @@ import { Badge, Button, Card, Empty, Field, Input, Select, Textarea } from '@/co
 import { Modal } from '@/components/modal';
 import { useAction } from '@/client/use-action';
 import { fmtDuration, money0 } from '@/lib/format';
-import { addCategory, archiveService, restoreService, saveService, type ServiceInput } from './api';
+import { addCategory, archiveService, restoreService, saveService, type ServiceInput } from '@/client/api/services';
 
 type Service = { id: string; name: string; description: string | null; categoryId: string; price: number; duration: number; active: boolean };
 type Category = { id: string; name: string; services: Service[] };

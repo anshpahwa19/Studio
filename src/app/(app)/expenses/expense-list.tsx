@@ -8,7 +8,7 @@ import { SortTh, useSort } from '@/components/sort-button';
 import { useAction } from '@/client/use-action';
 import { fmtDate, isoDate, money } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
-import { deleteExpense, saveExpense, type ExpenseInput } from './api';
+import { deleteExpense, saveExpense, type ExpenseInput } from '@/client/api/expenses';
 
 type Expense = { id: string; date: string; category: string; description: string; amount: number; method: string; vendor: string | null; branchId: string | null; branch: { name: string } | null };
 

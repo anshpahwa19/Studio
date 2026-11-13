@@ -1,8 +1,9 @@
 // Keeps the folder structure honest. Run by `npm run check`. See "Folder structure" in README.md.
 //
-//   src/app         screens and the /api route. Screens show data from the API and never touch the database.
+//   src/app         screens, and src/app/api: every HTTP endpoint, one route.ts per URL. Screens show data from
+//                   the API and never touch the database; endpoints call src/server and never touch it directly.
 //   src/components  shared UI pieces used by screens (browser code).
-//   src/client      browser-only helpers: calling the API, the saved session.
+//   src/client      browser-only helpers: client/api/* are the calls screens make to the endpoints, session.ts.
 //   src/lib         plain helpers safe in both places (formatting, validation, roles, bill maths).
 //   src/server      the backend: database, sign-in, API routes, and one folder per feature.
 import { readdirSync, readFileSync, statSync } from 'fs';
@@ -55,6 +56,14 @@ for (const file of walk(SRC)) {
   const isClientFile = /^\s*(['"])use client\1/.test(text);
   const bad = (msg: string) => problems.push(`src/${rel}: ${msg}`);
 
+  if (rel.startsWith('app/api/')) {
+    const name = rel.split('/').pop()!;
+    const isLib = rel.startsWith('app/api/_lib/');
+    if (!isLib && name !== 'route.ts') bad(`only route.ts files belong under app/api (one per URL). Shared code goes in app/api/_lib/, logic in server/.`);
+    if (isLib && name === 'route.ts') bad(`rename it: Next treats any route.ts as an endpoint, even in _lib.`);
+    if (!isLib && !/export const dynamic = 'force-dynamic'/.test(text) && !rel.includes('[...path]')) bad(`add export const dynamic = 'force-dynamic'; so the answer is never cached.`);
+  }
+
   if (top === 'server' && rel !== 'server/db.ts' && !/import\s+['"]server-only['"]/.test(text)) bad(`add import 'server-only'; at the top so it can never be bundled into the browser.`);
 
   for (const { spec, type } of importsOf(text)) {
@@ -71,7 +80,9 @@ for (const file of walk(SRC)) {
       if (pkg === 'server-only' || pkg === 'next/headers' || pkg === '@prisma/client') bad(`${where}. That is server-only.`);
     }
     if (top === 'server' && t && ['client', 'components', 'app'].includes(area(t))) bad(`${where}. server/ cannot depend on ${area(t)}/.`);
-    if (top === 'app' && !type) {
+    if (rel.startsWith('app/api/') && !type) {
+      if (pkg === '@prisma/client' || t === 'server/db') bad(`${where}. Endpoints call a feature's service.ts or queries.ts; only src/server uses the database.`);
+    } else if (top === 'app' && !type) {
       if (pkg === '@prisma/client') bad(`${where}. Screens never use the database; read data with api() from server/api/fetch.`);
       if (t && inServer(t)) {
         const ok = t === 'server/api/fetch' || t === 'server/auth/session' || (rel.startsWith('app/api/') && t === 'server/api/routes');

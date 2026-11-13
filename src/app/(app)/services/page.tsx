@@ -1,6 +1,6 @@
 import { api } from '@/server/api/fetch';
 import type { listServices } from '@/server/features/services/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { canEdit } from '@/lib/roles';
 import { PageHeader } from '@/components/ui';

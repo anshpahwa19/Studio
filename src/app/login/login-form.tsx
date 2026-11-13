@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { call } from '@/client/api-client';
+import { call } from '@/client/api/call';
 import { saveSession } from '@/client/session';
 import { Button, Field, Input } from '@/components/ui';
 

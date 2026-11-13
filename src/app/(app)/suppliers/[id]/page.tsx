@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '@/server/api/fetch';
 import type { getSupplier } from '@/server/features/suppliers/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { canEdit } from '@/lib/roles';
 import { fmtDate, isoDate, money0 } from '@/lib/format';

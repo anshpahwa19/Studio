@@ -5,7 +5,7 @@ import { Modal } from '@/components/modal';
 import { useAction } from '@/client/use-action';
 import { ROLES } from '@/lib/roles';
 import { GST_RATES, gstinProps, phoneProps } from '@/lib/validate';
-import { deleteBranch, deleteUser, saveBranch, saveSettings, saveUser, type SettingsInput } from './api';
+import { deleteBranch, deleteUser, saveBranch, saveSettings, saveUser, type SettingsInput } from '@/client/api/settings';
 
 type Branch = { id: string; name: string; address: string; active: boolean };
 type User = { id: string; name: string; email: string; role: string; active: boolean };

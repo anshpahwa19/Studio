@@ -7,7 +7,7 @@ import { Modal } from '@/components/modal';
 import { useAction } from '@/client/use-action';
 import { money, round2 } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/validate';
-import { addPayment, cancelInvoice, refundInvoice } from '../api';
+import { addPayment, cancelInvoice, refundInvoice } from '@/client/api/billing';
 
 /**
  * Renders the A4 sheet to a PDF named after the bill. The browser itself draws the sheet

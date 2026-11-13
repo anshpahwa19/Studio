@@ -45,6 +45,8 @@ async function run() {
   const l = await login('admin@salon.com', 'admin123');
   token = works('admin signs in', l)?.token;
   works('me', await call('GET', '/me'));
+  refused('unknown address gives a JSON 404', await call('GET', '/nothing/here'), 404);
+  refused('wrong method is refused', await call('DELETE', '/dashboard'), 405);
   refused('garbled token is refused', await call('GET', '/me', undefined, { token: 'abc.def' }), 401);
 
   console.log('Reads');

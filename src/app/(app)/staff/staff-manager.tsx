@@ -5,7 +5,7 @@ import { Badge, Button, Card, Empty, Field, Input } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/client/use-action';
 import { DAY_NAMES, fmtTime, money0, plural } from '@/lib/format';
-import { archiveStaff, restoreStaff, saveStaff, type StaffInput } from './api';
+import { archiveStaff, restoreStaff, saveStaff, type StaffInput } from '@/client/api/staff';
 import { phoneProps } from '@/lib/validate';
 
 type Member = { id: string; name: string; phone: string; email: string | null; title: string; skills: string; payType: string; commissionRate: number; monthlySalary: number; workDays: string; startTime: string; endTime: string; upcoming: number; active: boolean };

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import { call } from '@/client/api-client';
+import { call } from '@/client/api/call';
 import { readSession } from '@/client/session';
 
 /** Ends the session once its 12 hours are up, or when the browser no longer has it, and returns to the sign-in page. */

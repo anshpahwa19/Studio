@@ -1,7 +1,7 @@
 import { api } from '@/server/api/fetch';
 import type { expenseCategories, listExpenses } from '@/server/features/expenses/queries';
 import type { listBranches } from '@/server/features/settings/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { fmtDate, isoDate, monthEnd, money0 } from '@/lib/format';
 import { Card, PageHeader } from '@/components/ui';

@@ -8,7 +8,7 @@ import { Modal } from '@/components/modal';
 import { useAction } from '@/client/use-action';
 import { addDays, dayOfWeek, DAY_NAMES, fmtTime, monthEnd } from '@/lib/format';
 import { dayState, hoursWorked, type Day } from '@/lib/attendance';
-import { punchIn, punchOut, saveTimes } from './api';
+import { punchIn, punchOut, saveTimes } from '@/client/api/attendance';
 
 type Rec = { date: string; checkIn: string; checkOut: string | null };
 export type Row = { id: string; name: string; title: string; workDays: number[]; startTime: string; endTime: string; records: Rec[] };

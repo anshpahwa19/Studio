@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { LogOut } from 'lucide-react';
-import { call } from '@/client/api-client';
+import { call } from '@/client/api/call';
 import { clearSession } from '@/client/session';
 import { Modal } from './modal';
 import { Button } from './ui';

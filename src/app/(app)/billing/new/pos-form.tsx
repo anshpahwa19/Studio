@@ -8,8 +8,8 @@ import { useAction } from '@/client/use-action';
 import { computeBill } from '@/lib/billing';
 import { fmtDuration, money, round2 } from '@/lib/format';
 import { PAYMENT_METHODS, phoneProps } from '@/lib/validate';
-import { createInvoice } from '../api';
-import { saveCustomer } from '../../customers/api';
+import { createInvoice } from '@/client/api/billing';
+import { saveCustomer } from '@/client/api/customers';
 
 export type PosLine = { key: string; kind: 'service' | 'product'; refId: string; name: string; qty: number; unitPrice: number; staffId: string | null };
 type Pay = { amount: string; method: (typeof PAYMENT_METHODS)[number]; reference: string };

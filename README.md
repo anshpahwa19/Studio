@@ -51,7 +51,7 @@ Data is kept in `~/.config/Salon Studio/salon.db` on Linux and `%APPDATA%\Salon 
 
 Everything the app does goes through a REST API under `/api`: every change (new client, stock in, bill, payment) and every read.
 The screens call it, and so can any other client. Pages load their data from the API's GET endpoints, and saves go to its POST, PUT and DELETE endpoints, so the database is only reached through the API. The code that does the work is in each feature's folder under `src/server/features/`;
-the routes are listed in `src/server/api/routes.ts`.
+each URL is one `route.ts` file under `src/app/api/` (for example `src/app/api/customers/[id]/route.ts`).
 
 **Tests.** `npm run build`, then `npm run test:api`. It starts the app on a temporary database and runs about 100 checks of the API (every endpoint, role limits, sign-out, rate limit, CORS), then cleans up.
 
@@ -168,20 +168,28 @@ live/                      single-file browser version published on Claude
 public/                    logo and static files
 
 src/
-  app/                     SCREENS and the /api route. Nothing here talks to the database.
-    (app)/<screen>/        one folder per screen, e.g. customers/, billing/, inventory/
+  middleware.ts            CORS for /api (ALLOWED_ORIGINS)
+  app/
+    api/                   THE API: every HTTP endpoint, one route.ts per URL
+      customers/route.ts         GET list, POST create        -> /api/customers
+      customers/[id]/route.ts    GET, PUT, DELETE             -> /api/customers/:id
+      invoices/[id]/payments/route.ts, auth/login/route.ts, ... (same pattern for every endpoint)
+      [...path]/route.ts         JSON 404 for unknown addresses
+      _lib/handler.ts            route(): reads the body, runs the endpoint, sends { ok, data } or { ok, error }
+    (app)/<screen>/        SCREENS, one folder per screen (customers/, billing/, inventory/ ...)
       page.tsx               loads its data with api('/...') and lays it out
       *.tsx                  that screen's forms, tables and buttons (browser code)
-      api.ts                 that screen's saves: small functions that call the API
-    api/[[...path]]/route.ts the one HTTP entry point: JSON in, JSON out, CORS
     login/                 sign-in page
+  client/                  browser-only code
+    api/<feature>.ts         what screens call to save: small functions that call the endpoints above
+    api/call.ts              the fetch helper (adds the 12-hour token, handles errors)
+    session.ts, use-action.ts
   components/              shared UI used by several screens (modal, toast, select, sidebar, chart)
-  client/                  browser-only helpers: api-client.ts (calls the API), session.ts (12 h session), use-action.ts
   lib/                     plain helpers that run anywhere: format, validate, roles, billing maths, csv, period
   server/                  the BACKEND. Only this folder reads or writes the database.
     db.ts                    the Prisma client
     auth/                    session.ts (tokens, sign-out, who is signed in), login.ts (password check, rate limit)
-    api/                     routes.ts (the route table), helpers.ts, attempt.ts (errors to JSON), fetch.ts (how screens call the API)
+    api/                     attempt.ts (errors to JSON), helpers.ts (query-string helpers), fetch.ts (how screens call the API)
     features/<feature>/      one folder per part of the business
       service.ts               writes: create, update, delete (checks, rules, transactions)
       queries.ts               reads: lists and details returned by GET endpoints
@@ -190,16 +198,17 @@ src/
 
 ### Rules (checked by `npm run check`)
 
-1. **Screens never use the database.** Files in `src/app/` read data with `api()` and save with their `api.ts`. They may import only `server/api/fetch` and `server/auth/session` from `server/`.
-2. **Browser code cannot import `server/`.** `components/`, `client/` and any `'use client'` file may use `import type` from `server/features/...` for types, nothing else.
-3. **`lib/` stays plain.** No `server/`, `client/`, `components/`, `app/`, `next/headers` or Prisma. If it needs the database, it belongs in `server/`.
-4. **`server/` is backend only.** It never imports `app/`, `components/` or `client/`, and every file except `db.ts` starts with `import 'server-only';`.
-5. **Only these five folders exist under `src/`.**
+1. **Screens never use the database.** Screens read data with `api()` and save through `client/api/*`. They may import only `server/api/fetch` and `server/auth/session` from `server/`.
+2. **Endpoints live only in `src/app/api/`**, one `route.ts` per URL, each with `export const dynamic = 'force-dynamic'`. They call a feature's `service.ts` or `queries.ts`, never the database. Shared endpoint code goes in `app/api/_lib/` (not named `route.ts`).
+3. **Browser code cannot import `server/`.** `components/`, `client/` and any `'use client'` file may use `import type` from `server/features/...` for types, nothing else.
+4. **`lib/` stays plain.** No `server/`, `client/`, `components/`, `app/`, `next/headers` or Prisma. If it needs the database, it belongs in `server/`.
+5. **`server/` is backend only.** It never imports `app/`, `components/` or `client/`, and every file except `db.ts` starts with `import 'server-only';`.
+6. **Only these five folders exist under `src/`.**
 
 ### Adding something new
 
 - **A new field or rule for an existing feature:** change `service.ts` (writes) and `queries.ts` (reads) in `src/server/features/<feature>/`, then the screen in `src/app/(app)/<feature>/`.
-- **A new feature:** add `src/server/features/<name>/service.ts` and `queries.ts`, register its routes in `src/server/api/routes.ts`, add `src/app/(app)/<name>/page.tsx` and `api.ts`, add it to the menu in `src/app/(app)/layout.tsx` and its role in `src/lib/roles.ts`, and add its checks to `scripts/test-api.ts`.
-- **A new endpoint:** add one `route(...)` line in `src/server/api/routes.ts`, document it in the API section above, and test it in `scripts/test-api.ts`.
+- **A new feature:** add `src/server/features/<name>/service.ts` and `queries.ts`, its endpoints as `route.ts` files under `src/app/api/<name>/`, its screen `src/app/(app)/<name>/page.tsx`, and the calls the screen makes in `src/client/api/<name>.ts`, add it to the menu in `src/app/(app)/layout.tsx` and its role in `src/lib/roles.ts`, and add its checks to `scripts/test-api.ts`.
+- **A new endpoint:** add a `route.ts` (or an `export const POST = route(...)` line in the existing one for that URL) under `src/app/api/`, add the matching call in `src/client/api/<feature>.ts`, document it in the API section above, and test it in `scripts/test-api.ts`.
 
 `npm run check` type-checks the project and checks the folder rules. `npm run test:api` (after `npm run build`) tests the API. Run `npm run build` before shipping.

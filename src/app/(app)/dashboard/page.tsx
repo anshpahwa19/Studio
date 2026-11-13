@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, CalendarCheck, CalendarDays, CalendarPlus, CheckCircle2, Clock, IndianRupee, Package, PackagePlus, Receipt, UserPlus, Users, Wallet } from 'lucide-react';
 import { api } from '@/server/api/fetch';
 import type { dashboard } from '@/server/features/dashboard/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { canView } from '@/lib/roles';
 import { addDays, fmtDate, fmtDateTime, fmtTime, isoDate, money0, plural, toMinutes } from '@/lib/format';

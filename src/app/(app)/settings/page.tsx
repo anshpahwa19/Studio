@@ -1,6 +1,6 @@
 import { api } from '@/server/api/fetch';
 import type { getSettings, listBranches, listUsers } from '@/server/features/settings/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { PageHeader } from '@/components/ui';
 import { SettingsForms } from './settings-forms';

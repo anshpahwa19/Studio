@@ -1,6 +1,6 @@
 import { api } from '@/server/api/fetch';
 import type { listStaff } from '@/server/features/staff/queries';
-import type { DataOf } from '@/client/api-client';
+import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { PageHeader } from '@/components/ui';
 import { StaffManager } from './staff-manager';
