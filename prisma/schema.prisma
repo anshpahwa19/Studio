@@ -18,6 +18,18 @@ model User {
   role         String // Owner | Manager | Receptionist | Stylist
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
+  sessions     Session[]
+}
+
+// One row per signed-in browser or app. Signing out deletes it, which cancels that token straight away.
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Single row (id = 1) holding the business profile.

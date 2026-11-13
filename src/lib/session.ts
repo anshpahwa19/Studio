@@ -17,28 +17,55 @@ function secret() {
 
 const sign = (data: string) => createHmac('sha256', secret()).update(data).digest('base64url');
 
-/** A signed token for this user. Used as the login cookie and as the API bearer token. */
-export function issueToken(userId: string) {
-  const payload = Buffer.from(JSON.stringify({ u: userId, e: Date.now() + MAX_AGE * 1000 })).toString('base64url');
+export const TOKEN_MAX_AGE = MAX_AGE;
+
+let tableReady: Promise<unknown> | null = null;
+/** Databases made before sessions existed (including installed desktop apps) get the table the first time it is needed. */
+function ensureSessionTable() {
+  tableReady ??= db
+    .$executeRawUnsafe(
+      'CREATE TABLE IF NOT EXISTS "Session" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "expiresAt" DATETIME NOT NULL, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)',
+    )
+    .then(() => db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Session_userId_idx" ON "Session"("userId")'))
+    .catch((e) => { tableReady = null; throw e; });
+  return tableReady;
+}
+
+/** Starts a session for this user and returns its signed token. The token is only good while its session row exists. */
+async function issueToken(userId: string) {
+  await ensureSessionTable();
+  await db.session.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+  const expiresAt = new Date(Date.now() + MAX_AGE * 1000);
+  const s = await db.session.create({ data: { userId, expiresAt } });
+  const payload = Buffer.from(JSON.stringify({ u: userId, s: s.id, e: expiresAt.getTime() })).toString('base64url');
   return `${payload}.${sign(payload)}`;
 }
 
-export const TOKEN_MAX_AGE = MAX_AGE;
-
-export function startSession(userId: string) {
-  cookies().set(COOKIE, issueToken(userId), {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: MAX_AGE,
-  });
+/** Signs in: creates the session, sets the login cookie, and returns the token for API clients. */
+export async function startSession(userId: string) {
+  const token = await issueToken(userId);
+  cookies().set(COOKIE, token, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: MAX_AGE });
+  return token;
 }
 
-export function endSession() {
+/** Signs out: cancels this token for good, wherever it was copied to, and clears the cookie. */
+export async function endSession() {
+  const s = readToken();
+  if (s) {
+    await ensureSessionTable();
+    await db.session.deleteMany({ where: { id: s.sessionId } });
+  }
   cookies().delete(COOKIE);
 }
 
-function readSession(): string | null {
+/** Cancels every session of a user except (optionally) the current one, e.g. after a password change. */
+export async function endOtherSessions(userId: string, keepSessionId?: string) {
+  await ensureSessionTable();
+  await db.session.deleteMany({ where: { userId, ...(keepSessionId && { id: { not: keepSessionId } }) } });
+}
+
+/** The session named by this request's token, if the signature and expiry check out. Not yet checked against the database. */
+export function readToken(): { userId: string; sessionId: string } | null {
   // API clients send "Authorization: Bearer <token>"; the web app uses the cookie.
   const bearer = headers().get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
   const raw = bearer ?? cookies().get(COOKIE)?.value;
@@ -49,8 +76,8 @@ function readSession(): string | null {
   const given = Buffer.from(sig);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   try {
-    const { u, e } = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    return typeof u === 'string' && e > Date.now() ? u : null;
+    const { u, s, e } = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    return typeof u === 'string' && typeof s === 'string' && e > Date.now() ? { userId: u, sessionId: s } : null;
   } catch {
     return null;
   }
@@ -60,10 +87,14 @@ export type SessionUser = { id: string; name: string; email: string; role: strin
 
 /** Looks the signed-in person up in the database. Only the API itself uses this; everything else asks /api/me. */
 export async function lookupUser(): Promise<SessionUser | null> {
-  const id = readSession();
-  if (!id) return null;
-  const user = await db.user.findUnique({ where: { id }, select: { id: true, name: true, email: true, role: true, active: true } });
-  return user?.active ? user : null;
+  const t = readToken();
+  if (!t) return null;
+  await ensureSessionTable();
+  // The session must still exist: signing out, a password change or deleting the login all remove it.
+  const session = await db.session.findUnique({ where: { id: t.sessionId }, include: { user: { select: { id: true, name: true, email: true, role: true, active: true } } } });
+  if (!session || session.userId !== t.userId || session.expiresAt <= new Date() || !session.user.active) return null;
+  const { active: _a, ...user } = session.user;
+  return user;
 }
 
 /**

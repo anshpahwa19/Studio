@@ -28,7 +28,7 @@ const route = (method: string, path: string, run: Handler) => routes.push({ meth
 
 // Sign in / out
 route('POST', '/auth/login', ({ b }) => attempt(() => login(String(b.email ?? ''), String(b.password ?? ''))));
-route('POST', '/auth/logout', () => attempt(async () => logout()));
+route('POST', '/auth/logout', () => attempt(() => logout()));
 
 // Clients
 route('POST', '/customers', ({ b }) => customers.saveCustomer(b));

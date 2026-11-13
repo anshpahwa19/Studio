@@ -4,6 +4,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { computeBill, invoiceStatus } from '../src/lib/billing';
 import { addDays, fromMinutes, isoDate, toMinutes } from '../src/lib/format';
 
@@ -58,14 +59,16 @@ async function main() {
   });
 
   const hash = (p: string) => bcrypt.hash(p, 10);
-  await db.user.create({ data: { name: 'Shruti Pahwa', email: 'admin@salon.com', passwordHash: await hash('admin123'), role: 'Owner' } });
+  // Demo data keeps the well-known demo password. A clean install gets its own: OWNER_PASSWORD if set, otherwise a random one.
+  const ownerPassword = EMPTY ? process.env.OWNER_PASSWORD || randomBytes(9).toString('base64url') : 'admin123';
+  await db.user.create({ data: { name: 'Shruti Pahwa', email: 'admin@salon.com', passwordHash: await hash(ownerPassword), role: 'Owner' } });
 
   const categories = ['Haircut & Styling', 'Hair Colouring', 'Hair Spa & Treatments', 'Manicure', 'Pedicure', 'Nail Extensions', 'Nail Art & Gel'];
   const cat: Record<string, string> = {};
   for (const [i, name] of categories.entries()) cat[name] = (await db.serviceCategory.create({ data: { name, sortOrder: i } })).id;
 
   if (EMPTY) {
-    console.log('Clean database ready. Sign in with admin@salon.com / admin123 and change the password in Settings.');
+    console.log(`Clean database ready.\nSign in with admin@salon.com / ${ownerPassword}\nNote this password now, it is not shown again. You can change it from the account page.`);
     return;
   }
 

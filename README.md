@@ -26,7 +26,7 @@ npm run dist:mac          # makes an installer (.dmg) in dist/, for Apple Silico
 
 On first launch the app copies `prisma/dev.db` to `~/Library/Application Support/Salon Studio/salon.db`
 and uses that copy from then on. **Back up that file** to keep your records safe.
-To ship an installer without demo data, run `npm run setup:fresh` before `npm run dist:mac`.
+To ship an installer without demo data, run `npm run setup:fresh` before `npm run dist:mac`. It prints a random owner password once; note it down. To choose your own, run it as `OWNER_PASSWORD=yourpassword npm run setup:fresh`.
 
 ### As a Linux or Windows app
 
@@ -45,7 +45,7 @@ Data is kept in `~/.config/Salon Studio/salon.db` on Linux and `%APPDATA%\Salon 
 |---|---|
 | `npm run setup` | Creates the database and loads demo data. If it already has data, it is left alone |
 | `npm run setup:demo` | Wipes everything and reloads demo data |
-| `npm run setup:fresh` | Wipes everything and leaves only the owner login, business details and service categories |
+| `npm run setup:fresh` | Wipes everything and leaves only the owner login (with a random password, shown once), business details and service categories |
 
 ## API
 
@@ -53,7 +53,11 @@ Everything the app does goes through a REST API under `/api`: every change (new 
 The screens call it, and so can any other client. Pages load their data from the API's GET endpoints, and saves go to its POST, PUT and DELETE endpoints, so the database is only reached through the API. The code that does the work is in each feature's `service.ts`;
 the routes are listed in `src/lib/api-routes.ts`.
 
-**Sessions.** Signing in gives a token that lasts 12 hours. The browser keeps it in local storage and sends it with every API call; it also sets a login cookie so page loads work. When the 12 hours are up (or the browser no longer has the token), the app signs the person out. Pages and the sidebar ask `GET /api/me` who is signed in, so only the API looks users up in the database.
+**Tests.** `npm run build`, then `npm run test:api`. It starts the app on a temporary database and runs about 100 checks of the API (every endpoint, role limits, sign-out, rate limit, CORS), then cleans up.
+
+**Sessions.** Signing in gives a token that lasts 12 hours. The browser keeps it in local storage and sends it with every API call; it also sets a login cookie so page loads work. When the 12 hours are up (or the browser no longer has the token), the app signs the person out. Pages and the sidebar ask `GET /api/me` who is signed in, so only the API looks users up in the database. Signing out ends that session on the server, so a copied token stops working at once; changing a password or switching a login off signs that person out everywhere. After 5 wrong passwords for an email (or 20 from one address) sign-in is blocked for 15 minutes.
+
+**Other websites.** Browsers only let a website on another domain call the API if its address is listed in `ALLOWED_ORIGINS` in `.env` (comma separated). Those sites sign in with the token, not the cookie. Mobile apps and servers are not affected.
 
 Sign in with `POST /api/auth/login` (`{ "email", "password" }`). It sets the login cookie and returns a `token`;
 other clients send it as `Authorization: Bearer <token>`. Replies are `{ "ok": true, "data": … }` or

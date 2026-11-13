@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { attempt } from '@/lib/action';
-import { ActionError, lookupUser, requireEdit } from '@/lib/session';
+import { ActionError, endOtherSessions, lookupUser, readToken, requireEdit } from '@/lib/session';
 import { ROLES } from '@/lib/roles';
 import { toMinutes } from '@/lib/format';
 import * as v from '@/lib/validate';
@@ -80,6 +80,8 @@ export async function saveUser(input: z.input<typeof userSchema>) {
     if (id === me.id && (data.role !== 'Owner' || !data.active)) throw new ActionError('You cannot remove your own owner access.');
     if (id) {
       await db.user.update({ where: { id }, data: { ...data, ...(password && { passwordHash: await bcrypt.hash(password, 10) }) } });
+      // A new password or a switched-off login signs that person out everywhere.
+      if (password || !data.active) await endOtherSessions(id);
     } else {
       if (!password) throw new ActionError('Set a password for the new login.');
       await db.user.create({ data: { ...data, passwordHash: await bcrypt.hash(password, 10) } });
@@ -110,5 +112,7 @@ export async function changeMyPassword(current: string, next: string) {
     const user = await db.user.findUniqueOrThrow({ where: { id: me.id } });
     if (!(await bcrypt.compare(current, user.passwordHash))) throw new ActionError('Your current password is not right.');
     await db.user.update({ where: { id: me.id }, data: { passwordHash: await bcrypt.hash(next, 10) } });
+    // Signed in elsewhere? Those sessions end; this one carries on.
+    await endOtherSessions(me.id, readToken()?.sessionId);
   });
 }
