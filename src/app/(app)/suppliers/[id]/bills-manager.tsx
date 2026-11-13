@@ -48,7 +48,7 @@ export function BillsManager({ supplier, bills, today, editable }: { supplier: {
                         <td className="w-8 pr-0"><button type="button" aria-label="Show payments" aria-expanded={open === b.id} onClick={() => setOpen(open === b.id ? null : b.id)} className="rounded p-1 text-ink-mute hover:bg-stone-100">{open === b.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</button></td>
                         <td>
                           <div className="font-medium">{b.billNumber || `Bill of ${fmtDate(b.date, { day: 'numeric', month: 'short' })}`}</div>
-                          {b.fileName && <a href={`/suppliers/bill-file/${b.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-medium text-violet-600 hover:underline"><FileText size={13} />View bill</a>}{b.notes && <div className="max-w-[220px] truncate text-[12px] text-ink-mute" title={b.notes}>{b.notes}</div>}</td>
+                          {b.fileName && <a href={`/api/supplier-bills/${b.id}/file`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-medium text-violet-600 hover:underline"><FileText size={13} />View bill</a>}{b.notes && <div className="max-w-[220px] truncate text-[12px] text-ink-mute" title={b.notes}>{b.notes}</div>}</td>
                         <td className="whitespace-nowrap text-ink-soft">{fmtDate(b.date)}</td>
                         <td className={`whitespace-nowrap ${late ? 'font-medium text-rose-600' : 'text-ink-soft'}`}>{b.dueDate ? fmtDate(b.dueDate) : '—'}{late && <div className="text-[11.5px]">Overdue</div>}</td>
                         <td className="tabular text-right">{money(b.amount)}</td>

@@ -2,7 +2,7 @@ import 'server-only';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { attempt } from './action';
-import { ActionError, currentUser, requireView, type SessionUser } from './session';
+import { ActionError, lookupUser, requireView, type SessionUser } from './session';
 import { canView, type Area } from './roles';
 import { addDays, isoDate, monthEnd, parseDate, round2, weekStart } from './format';
 import { stockByBranch } from './stock';
@@ -27,7 +27,7 @@ const page = (q: Q) => ({ take: num(q, 'limit', 100, 5000), skip: Math.max(Numbe
 
 export const me = () =>
   attempt(async () => {
-    const user = await currentUser();
+    const user = await lookupUser();
     if (!user) throw new ActionError('Your session has ended. Sign in again.', 401);
     return user;
   });

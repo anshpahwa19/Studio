@@ -6,6 +6,7 @@ import type { DataOf } from '@/lib/api-client';
 import { canView, type Area } from '@/lib/roles';
 import { plural } from '@/lib/format';
 import { Shell } from '@/components/sidebar';
+import { SessionGuard } from '@/components/session-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const items = NAV.filter((n) => canView(user.role, n.area)).map(({ href, label }) => ({ href, label }));
   return (
     <Shell items={items} salon={salon ?? 'Salon'} user={{ name: user.name, role: user.role }} alerts={alerts} canBill={billing} canStock={stock}>
+      <SessionGuard />
       {children}
     </Shell>
   );

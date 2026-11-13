@@ -53,6 +53,8 @@ Everything the app does goes through a REST API under `/api`: every change (new 
 The screens call it, and so can any other client. Pages load their data from the API's GET endpoints, and saves go to its POST, PUT and DELETE endpoints, so the database is only reached through the API. The code that does the work is in each feature's `service.ts`;
 the routes are listed in `src/lib/api-routes.ts`.
 
+**Sessions.** Signing in gives a token that lasts 12 hours. The browser keeps it in local storage and sends it with every API call; it also sets a login cookie so page loads work. When the 12 hours are up (or the browser no longer has the token), the app signs the person out. Pages and the sidebar ask `GET /api/me` who is signed in, so only the API looks users up in the database.
+
 Sign in with `POST /api/auth/login` (`{ "email", "password" }`). It sets the login cookie and returns a `token`;
 other clients send it as `Authorization: Bearer <token>`. Replies are `{ "ok": true, "data": … }` or
 `{ "ok": false, "error": "…" }` with status 401 (not signed in), 403 (role not allowed), 422 (invalid input),

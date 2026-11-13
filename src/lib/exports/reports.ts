@@ -1,14 +1,13 @@
+import 'server-only';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { currentUser } from '@/lib/session';
+import { lookupUser } from '@/lib/session';
 import { canView } from '@/lib/roles';
 import { isoDate, round2 } from '@/lib/format';
-import { range, resolvePeriod } from '../period';
-
-export const dynamic = 'force-dynamic';
+import { range, resolvePeriod } from '@/app/(app)/reports/period';
 
 export async function GET(req: NextRequest) {
-  const user = await currentUser();
+  const user = await lookupUser();
   if (!user || !canView(user.role, 'reports')) return new Response('Not allowed', { status: 403 });
   const sp = Object.fromEntries(req.nextUrl.searchParams);
   const { from, to } = resolvePeriod(sp);

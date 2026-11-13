@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { call } from '@/lib/api-client';
+import { saveSession } from '@/lib/client-session';
 import { Button, Field, Input } from '@/components/ui';
 
 export function LoginForm() {
@@ -12,12 +13,13 @@ export function LoginForm() {
     const form = new FormData(e.currentTarget);
     setPending(true);
     setError(null);
-    const res = await call('POST', '/auth/login', { email: form.get('email'), password: form.get('password') });
-    if (res.ok) {
+    const res = await call<{ token: string; expiresIn: number }>('POST', '/auth/login', { email: form.get('email'), password: form.get('password') });
+    if (res.ok && res.data) {
+      saveSession(res.data.token, res.data.expiresIn);
       window.location.assign('/dashboard');
       return;
     }
-    setError(res.error);
+    setError(res.ok ? 'Could not sign in. Try again.' : res.error);
     setPending(false);
   }
 

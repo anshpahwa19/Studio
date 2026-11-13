@@ -1,5 +1,6 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { cache } from 'react';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from './db';
@@ -57,12 +58,29 @@ function readSession(): string | null {
 
 export type SessionUser = { id: string; name: string; email: string; role: string };
 
-export async function currentUser(): Promise<SessionUser | null> {
+/** Looks the signed-in person up in the database. Only the API itself uses this; everything else asks /api/me. */
+export async function lookupUser(): Promise<SessionUser | null> {
   const id = readSession();
   if (!id) return null;
   const user = await db.user.findUnique({ where: { id }, select: { id: true, name: true, email: true, role: true, active: true } });
   return user?.active ? user : null;
 }
+
+/**
+ * Who is signed in, for pages and layouts. Asks the API (GET /api/me) with this request's login rather than
+ * reading the database. Asked once per request, however many components need it.
+ */
+export const currentUser = cache(async (): Promise<SessionUser | null> => {
+  const h = headers();
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
+  try {
+    const res = await fetch(`${h.get('x-forwarded-proto') ?? 'http'}://${host}/api/me`, { headers: { cookie: h.get('cookie') ?? '', authorization: h.get('authorization') ?? '' }, cache: 'no-store' });
+    const body = (await res.json()) as { ok: boolean; data?: SessionUser };
+    return body.ok && body.data ? body.data : null;
+  } catch {
+    return null;
+  }
+});
 
 /** For pages: redirect to login, or to the dashboard if the role may not see this area. */
 export async function requirePage(area: Area): Promise<SessionUser> {
@@ -81,7 +99,7 @@ export class ActionError extends Error {
 
 /** For API reads: throw if not signed in or not allowed to see this area. */
 export async function requireView(area: Area): Promise<SessionUser> {
-  const user = await currentUser();
+  const user = await lookupUser();
   if (!user) throw new ActionError('Your session has ended. Sign in again.', 401);
   if (!canView(user.role, area)) throw new ActionError('Your role cannot see this.', 403);
   return user;
@@ -89,7 +107,7 @@ export async function requireView(area: Area): Promise<SessionUser> {
 
 /** For server actions: throw if not signed in or not allowed to change this area. */
 export async function requireEdit(area: Area): Promise<SessionUser> {
-  const user = await currentUser();
+  const user = await lookupUser();
   if (!user) throw new ActionError('Your session has ended. Sign in again.', 401);
   if (!canEdit(user.role, area)) throw new ActionError('Your role cannot make changes here.', 403);
   return user;

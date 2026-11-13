@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { attempt } from '@/lib/action';
-import { ActionError, currentUser, requireEdit } from '@/lib/session';
+import { ActionError, lookupUser, requireEdit } from '@/lib/session';
 import { ROLES } from '@/lib/roles';
 import { toMinutes } from '@/lib/format';
 import * as v from '@/lib/validate';
@@ -104,7 +104,7 @@ export async function deleteUser(id: string) {
 
 export async function changeMyPassword(current: string, next: string) {
   return attempt(async () => {
-    const me = await currentUser();
+    const me = await lookupUser();
     if (!me) throw new ActionError('Your session has ended. Sign in again.');
     if (next.length < 8) throw new ActionError('The new password needs at least 8 characters.');
     const user = await db.user.findUniqueOrThrow({ where: { id: me.id } });

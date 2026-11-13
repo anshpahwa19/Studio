@@ -39,8 +39,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: { pe
         subtitle={`${fmtDate(from)} to ${fmtDate(to)} · ${branchName ?? 'All branches combined'}`}
         actions={
           <>
-            <a href={`/reports/export?type=invoices&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export sales (CSV)</a>
-            <a href={`/reports/export?type=expenses&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export expenses (CSV)</a>
+            <a href={`/api/reports/export?type=invoices&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export sales (CSV)</a>
+            <a href={`/api/reports/export?type=expenses&${qs}`} className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-medium hover:bg-canvas">Export expenses (CSV)</a>
           </>
         }
       />

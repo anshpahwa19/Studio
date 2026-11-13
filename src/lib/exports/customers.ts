@@ -1,17 +1,16 @@
+import 'server-only';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { currentUser } from '@/lib/session';
+import { lookupUser } from '@/lib/session';
 import { canView } from '@/lib/roles';
 import { isoDate } from '@/lib/format';
 import { csvCell } from '@/lib/csv';
-
-export const dynamic = 'force-dynamic';
 
 const CUSTOMER_COLUMNS = ['Name', 'Mobile', 'Email', 'Gender', 'Branch', 'Preferred stylist', 'Notes'];
 
 /** All active clients as CSV, in the same columns the bulk upload reads. ?template=1 gives just the header and an example row. */
 export async function GET(req: NextRequest) {
-  const user = await currentUser();
+  const user = await lookupUser();
   if (!user || !canView(user.role, 'customers')) return new Response('Not allowed', { status: 403 });
   const sp = req.nextUrl.searchParams;
   let rows: (string | number)[][];

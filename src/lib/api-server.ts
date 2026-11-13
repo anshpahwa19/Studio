@@ -22,8 +22,13 @@ type Query = Record<string, string | number | boolean | null | undefined>;
 export async function api<T>(path: string, query?: Query): Promise<T> {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined && v !== null && v !== '' && v !== false) qs.set(k, String(v));
-  const res = await fetch(`${origin()}/api${path}${qs.size ? `?${qs}` : ''}`, { headers: { cookie: headers().get('cookie') ?? '' }, cache: 'no-store' });
-  const body = JSON.parse(await res.text(), revive) as { ok: true; data: T } | { ok: false; error: string };
+  const res = await fetch(`${origin()}/api${path}${qs.size ? `?${qs}` : ''}`, { headers: { cookie: headers().get('cookie') ?? '', authorization: headers().get('authorization') ?? '' }, cache: 'no-store' });
+  let body: { ok: true; data: T } | { ok: false; error: string };
+  try {
+    body = JSON.parse(await res.text(), revive);
+  } catch {
+    notFound(); // not an API answer, e.g. a page address that matches a file download
+  }
   if (body.ok) return body.data;
   if (res.status === 401) redirect('/login');
   if (res.status === 403) redirect('/dashboard');

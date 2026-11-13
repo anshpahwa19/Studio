@@ -38,7 +38,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
           <Input id="q" name="q" defaultValue={q} placeholder="Search by name, mobile or email" aria-label="Search clients" />
         </form>
         {branches.length > 0 && <BranchFilter branches={branches} value={branch} q={q} sort={searchParams.sort ? sort : ''} dir={dir} />}
-        <div className="ml-auto flex gap-2"><BulkButtons canEdit={canEdit(user.role, 'customers')} downloadHref={`/customers/export?${new URLSearchParams({ ...(q && { q }), ...(branch && { branch }) })}`} /></div>
+        <div className="ml-auto flex gap-2"><BulkButtons canEdit={canEdit(user.role, 'customers')} downloadHref={`/api/customers/export?${new URLSearchParams({ ...(q && { q }), ...(branch && { branch }) })}`} /></div>
       </div>
       <Card pad={false}>
         {customers.length === 0 ? (

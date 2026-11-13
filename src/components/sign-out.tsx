@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { call } from '@/lib/api-client';
+import { clearSession } from '@/lib/client-session';
 import { Modal } from './modal';
 import { Button } from './ui';
 
@@ -12,6 +13,7 @@ export function SignOutDialog({ open, onClose }: { open: boolean; onClose: () =>
     e.preventDefault();
     setPending(true);
     await call('POST', '/auth/logout');
+    clearSession();
     window.location.assign('/login');
   }
   return (
