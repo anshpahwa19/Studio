@@ -8,8 +8,8 @@ import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { toast } from '@/components/toast';
 import { addDays, dayOfWeek, fmtDate, fmtDuration, fmtTime, fromMinutes, isoDate, money0, toMinutes, weekStart } from '@/lib/format';
-import { bookAppointment, rescheduleAppointment, setAppointmentStatus } from './actions';
-import { saveCustomer } from '../customers/actions';
+import { bookAppointment, rescheduleAppointment, setAppointmentStatus } from './api';
+import { saveCustomer } from '../customers/api';
 import { ClientCombobox } from '@/components/client-combobox';
 import { phoneProps } from '@/lib/validate';
 

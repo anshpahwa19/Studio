@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button, Field, Input } from '@/components/ui';
 import { toast } from '@/components/toast';
 import { useAction } from '@/components/use-action';
-import { changeMyPassword } from '../settings/actions';
+import { changeMyPassword } from '../settings/api';
 
 export function PasswordForm() {
   const [f, setF] = useState({ current: '', next: '', confirm: '' });

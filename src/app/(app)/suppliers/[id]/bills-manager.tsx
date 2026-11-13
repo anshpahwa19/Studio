@@ -7,7 +7,7 @@ import { useAction } from '@/components/use-action';
 import { fmtDate, money } from '@/lib/format';
 import { billStatus, dueOf } from '@/lib/purchases';
 import { PAYMENT_METHODS } from '@/lib/validate';
-import { addPayment, deleteBill, deletePayment, saveBill, type BillInput, type PaymentInput } from './actions';
+import { addPayment, deleteBill, deletePayment, saveBill, type BillInput, type PaymentInput } from './api';
 
 type Payment = { id: string; date: string; amount: number; method: string; reference: string | null };
 type Bill = { id: string; billNumber: string | null; fileName: string | null; date: string; dueDate: string | null; amount: number; paid: number; notes: string | null; payments: Payment[] };

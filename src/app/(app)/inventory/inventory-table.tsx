@@ -7,11 +7,11 @@ import { useAction } from '@/components/use-action';
 import { fmtDateTime, isoDate, money } from '@/lib/format';
 import { SortTh, useSort } from '@/components/sort-button';
 import { toast } from '@/components/toast';
-import { deleteProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from './actions';
+import { deleteProduct, moveStock, saveProduct, stockHistory, transferStock, type ProductInput } from './api';
 
 type Product = { id: string; name: string; sku: string | null; category: string; supplierId: string | null; supplierName: string | null; costPrice: number; price: number; stock: number; byBranch: Record<string, number>; reorderLevel: number; unit: string };
 type Branch = { id: string; name: string };
-type Move = Awaited<ReturnType<typeof stockHistory>>[number];
+type Move = NonNullable<Awaited<ReturnType<typeof stockHistory> extends Promise<infer R> ? (R extends { ok: true; data?: infer D } ? D : never) : never>>[number];
 
 const MOVE_LABEL: Record<string, string> = { IN: 'Received', OUT: 'Used / removed', ADJUST: 'Count correction', SALE: 'Sold', RETURN: 'Returned', TRANSFER: 'Transfer' };
 
@@ -74,7 +74,7 @@ export function InventoryTable({ products, suppliers, branches, branch, autoStoc
                       <td>
                         <div className="flex justify-end gap-1">
                           <Button size="sm" variant="secondary" onClick={() => setMove({ p, type: 'IN', qty: '', note: '', date: isoDate(), supplierId: p.supplierId ?? '', branchId: startBranch, toBranchId: otherBranch(startBranch) })}>Stock</Button>
-                          <Button size="sm" variant="ghost" onClick={async () => { setHistory({ p, rows: null }); setHistory({ p, rows: await stockHistory(p.id) }); }}>History</Button>
+                          <Button size="sm" variant="ghost" onClick={async () => { setHistory({ p, rows: null }); const r = await stockHistory(p.id); if (r.ok) setHistory({ p, rows: r.data ?? [] }); else { setHistory(null); toast.error(r.error); } }}>History</Button>
                           <Button size="sm" variant="ghost" onClick={() => setEdit({ ...p })}>Edit</Button>
                         </div>
                       </td>

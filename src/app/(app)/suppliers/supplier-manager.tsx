@@ -7,7 +7,7 @@ import { Badge, Button, Card, Empty, Field, Input, Textarea } from '@/components
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { fmtDate, money0, plural } from '@/lib/format';
-import { saveSupplier, setSupplierActive, type SupplierInput } from './actions';
+import { saveSupplier, setSupplierActive, type SupplierInput } from './api';
 
 type Row = {
   id: string; name: string; contact: string | null; phone: string | null; email: string | null; address: string | null; gstin: string | null; notes: string | null;

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { CustomerForm, type BranchOption, type StaffOption } from './customer-form';
-import { archiveCustomer, type CustomerInput } from './actions';
+import { archiveCustomer, type CustomerInput } from './api';
 
 export function NewCustomerButton({ staff, branches, autoOpen = false }: { staff: StaffOption[]; branches: BranchOption[]; autoOpen?: boolean }) {
   const [open, setOpen] = useState(autoOpen);

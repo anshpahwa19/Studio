@@ -1,9 +1,8 @@
-'use server';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { attempt } from '@/lib/action';
-import { ActionError, requireEdit, requirePage } from '@/lib/session';
+import { ActionError, requireEdit, requireView } from '@/lib/session';
 import { branchQty, resolveBranch } from '@/lib/stock';
 import { isoDate, parseDate } from '@/lib/format';
 import * as v from '@/lib/validate';
@@ -149,6 +148,8 @@ export async function transferStock(input: z.input<typeof transferSchema>) {
 }
 
 export async function stockHistory(productId: string) {
-  await requirePage('inventory');
-  return db.stockMovement.findMany({ where: { productId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, include: { supplier: { select: { name: true } }, branch: { select: { name: true } } } });
+  return attempt(async () => {
+    await requireView('inventory');
+    return db.stockMovement.findMany({ where: { productId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 50, include: { supplier: { select: { name: true } }, branch: { select: { name: true } } } });
+  });
 }

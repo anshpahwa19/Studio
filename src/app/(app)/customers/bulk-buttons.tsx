@@ -5,7 +5,7 @@ import { Button } from '@/components/ui';
 import { Modal } from '@/components/modal';
 import { useAction } from '@/components/use-action';
 import { toast } from '@/components/toast';
-import { importCustomers, type ImportResult } from './actions';
+import { importCustomers, type ImportResult } from './api';
 
 export function BulkButtons({ downloadHref, canEdit }: { downloadHref: string; canEdit: boolean }) {
   const [open, setOpen] = useState(false);

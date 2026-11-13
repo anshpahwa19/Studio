@@ -47,6 +47,30 @@ Data is kept in `~/.config/Salon Studio/salon.db` on Linux and `%APPDATA%\Salon 
 | `npm run setup:demo` | Wipes everything and reloads demo data |
 | `npm run setup:fresh` | Wipes everything and leaves only the owner login, business details and service categories |
 
+## API
+
+Every change the app makes (new client, stock in, bill, payment, and so on) goes through a REST API under `/api`.
+The screens call it, and so can any other client. The code that does the work is in each feature's `service.ts`;
+the routes are listed in `src/lib/api-routes.ts`.
+
+Sign in with `POST /api/auth/login` (`{ "email", "password" }`). It sets the login cookie and returns a `token`;
+other clients send it as `Authorization: Bearer <token>`. Replies are `{ "ok": true, "data": … }` or
+`{ "ok": false, "error": "…" }` with status 401 (not signed in), 403 (role not allowed), 422 (invalid input),
+409 or 400 (duplicate, or a rule was broken).
+
+| Area | Endpoints |
+|---|---|
+| Clients | `POST /customers`, `PUT /customers/:id`, `DELETE /customers/:id` (archive), `POST /customers/import` `{csv}` |
+| Appointments | `POST /appointments`, `PUT /appointments/:id` (reschedule), `POST /appointments/:id/status` |
+| Attendance | `POST /attendance/punch-in`, `POST /attendance/punch-out`, `PUT /attendance` |
+| Bills | `POST /invoices`, `POST /invoices/:id/payments`, `/cancel`, `/refunds` |
+| Stock | `POST /products`, `PUT /products/:id`, `POST /products/:id/archive`, `DELETE /products/:id`, `GET /products/:id/history`, `POST /stock/movements`, `POST /stock/transfers` |
+| Services | `POST /services`, `PUT /services/:id`, `POST /services/:id/archive` and `/restore`, `POST /service-categories` |
+| Staff | `POST /staff`, `PUT /staff/:id`, `POST /staff/:id/archive` and `/restore` |
+| Suppliers | `POST /suppliers`, `PUT /suppliers/:id`, `POST /suppliers/:id/active`, `POST /supplier-bills` (form upload), `PUT` / `DELETE /supplier-bills/:id`, `POST /supplier-payments`, `DELETE /supplier-payments/:id` |
+| Expenses | `POST /expenses`, `PUT /expenses/:id`, `DELETE /expenses/:id` |
+| Settings | `PUT /settings`, `POST /branches`, `PUT` / `DELETE /branches/:id`, `POST /users`, `PUT` / `DELETE /users/:id`, `POST /me/password` |
+
 ## Live version on Claude
 
 `live/salon-studio.html` is a browser version of the same app, published as a private Claude page:
