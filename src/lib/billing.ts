@@ -4,7 +4,7 @@ import { round2 } from './format';
 // Prices are before GST. A bill discount is shared across lines in proportion to their value,
 // and GST is charged on each line after its share of the discount.
 
-export type LineInput = { qty: number; unitPrice: number; taxRate: number };
+type LineInput = { qty: number; unitPrice: number; taxRate: number };
 export type Discount = { type: 'percent' | 'amount' | null; value: number };
 
 export function computeBill(lines: LineInput[], discount: Discount) {

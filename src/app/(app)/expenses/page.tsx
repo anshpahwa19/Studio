@@ -1,13 +1,11 @@
 import { api } from '@/server/api/fetch';
-import type { expenseCategories, listExpenses } from '@/server/features/expenses/queries';
+import type { listExpenses } from '@/server/features/expenses/queries';
 import type { listBranches } from '@/server/features/settings/queries';
 import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { fmtDate, isoDate, monthEnd, money0 } from '@/lib/format';
 import { Card, PageHeader } from '@/components/ui';
 import { ExpenseList } from './expense-list';
-
-const DEFAULT_CATEGORIES = ['Rent', 'Salaries', 'Utilities', 'Product restock', 'Laundry', 'Marketing', 'Refreshments', 'Maintenance'];
 
 export default async function ExpensesPage({ searchParams }: { searchParams: { from?: string; to?: string; new?: string; branch?: string } }) {
   await requirePage('expenses');
@@ -20,10 +18,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { f
   const periodLabel = isMonth ? fmtDate(from, { month: 'long', year: 'numeric' }) : from === to ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`;
   const allBranches = (await api<DataOf<typeof listBranches>>('/branches')).map((b) => ({ id: b.id, name: b.name, active: b.active }));
   const branch = allBranches.some((b) => b.id === searchParams.branch) ? searchParams.branch! : '';
-  const [{ items: expenses, byBranch: monthAll }, used] = await Promise.all([
-    api<DataOf<typeof listExpenses>>('/expenses', { from, to, branch }),
-    api<DataOf<typeof expenseCategories>>('/expenses/categories'),
-  ]);
+  const { items: expenses, byBranch: monthAll } = await api<DataOf<typeof listExpenses>>('/expenses', { from, to, branch });
   const branches = allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }));
   const perBranch = [...allBranches.map((b) => ({ id: b.id as string | null, name: b.name })), { id: null, name: 'Whole business' }]
     .map((b) => ({ ...b, total: monthAll.find((m) => m.branchId === b.id)?.total ?? 0, count: monthAll.find((m) => m.branchId === b.id)?.count ?? 0 }))
@@ -31,13 +26,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: { f
   const grand = perBranch.reduce((a, b) => a + b.total, 0);
   const byCategory = Object.entries(expenses.reduce<Record<string, number>>((a, e) => ({ ...a, [e.category]: (a[e.category] ?? 0) + e.amount }), {})).sort((a, b) => b[1] - a[1]);
   const total = expenses.reduce((a, e) => a + e.amount, 0);
-  const categories = [...new Set([...DEFAULT_CATEGORIES, ...used])].sort();
 
   return (
     <>
       <PageHeader title="Business Expenses" subtitle={`${periodLabel} · ${money0(total)} spent · ${allBranches.find((b) => b.id === branch)?.name ?? 'All branches'}`} />
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_280px]">
-        <ExpenseList autoOpen={searchParams.new === '1'} from={from} to={to} branch={branch} allBranches={allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }))} expenses={expenses} categories={categories} branches={branches} />
+        <ExpenseList autoOpen={searchParams.new === '1'} from={from} to={to} branch={branch} allBranches={allBranches.filter((b) => b.active).map((b) => ({ id: b.id, name: b.name }))} expenses={expenses} branches={branches} />
         <div className="space-y-6">
         {allBranches.length > 0 && (
           <Card title="By branch" subtitle="This period, all branches">

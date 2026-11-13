@@ -12,7 +12,7 @@ import { deleteExpense, saveExpense, type ExpenseInput } from '@/client/api/expe
 
 type Expense = { id: string; date: string; category: string; description: string; amount: number; method: string; vendor: string | null; branchId: string | null; branch: { name: string } | null };
 
-export function ExpenseList({ from, to, branch, allBranches, expenses, categories, branches, autoOpen = false }: { from: string; to: string; branch: string; allBranches: { id: string; name: string }[]; expenses: Expense[]; categories: string[]; branches: { id: string; name: string }[]; autoOpen?: boolean }) {
+export function ExpenseList({ from, to, branch, allBranches, expenses, branches, autoOpen = false }: { from: string; to: string; branch: string; allBranches: { id: string; name: string }[]; expenses: Expense[]; branches: { id: string; name: string }[]; autoOpen?: boolean }) {
   const router = useRouter();
   const today = isoDate();
   const blank = (): ExpenseInput => ({ date: today >= from && today <= to ? today : to, category: 'General', description: '', amount: '' as unknown as number, method: 'UPI', vendor: '', branchId: branch || branches[0]?.id || null });

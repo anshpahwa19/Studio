@@ -5,7 +5,7 @@ import { toast } from '@/components/toast';
 
 type Result<T> = { ok: true; data?: T } | { ok: false; error: string };
 
-/** Calls a server action, shows the outcome as a toast and refreshes the page data. */
+/** Runs a save (a call to the API), shows the outcome as a toast and refreshes the page data. */
 export function useAction() {
   const router = useRouter();
   const [pending, start] = useTransition();

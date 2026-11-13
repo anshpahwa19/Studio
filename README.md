@@ -213,4 +213,4 @@ src/
 - **A new feature:** add `src/server/features/<name>/service.ts` and `queries.ts`, its endpoints as `route.ts` files under `src/app/api/<name>/`, its screen `src/app/(app)/<name>/page.tsx`, and the calls the screen makes in `src/client/api/<name>.ts`, add it to the menu in `src/app/(app)/layout.tsx` and its role in `src/lib/roles.ts`, and add its checks to `scripts/test-api.ts`.
 - **A new endpoint:** add a `route.ts` (or an `export const POST = route(...)` line in the existing one for that URL) under `src/app/api/`, add the matching call in `src/client/api/<feature>.ts`, document it in the API section above, and test it in `scripts/test-api.ts`.
 
-`npm run check` type-checks the project and checks the folder rules. `npm run test:api` (after `npm run build`) tests the API. Run `npm run build` before shipping.
+`npm run check` type-checks the project (unused variables, imports and parameters are errors, so dead code gets removed as you go) and checks the folder rules. `npm run test:api` (after `npm run build`) tests the API. Run `npm run build` before shipping.

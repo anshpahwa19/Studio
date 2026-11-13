@@ -5,7 +5,7 @@ import { ActionError } from '@/server/auth/session';
 
 export type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string; status?: number };
 
-/** Runs a server action body and turns expected failures into a message for the form. */
+/** Runs the body of a write and turns expected failures into a message for the form. */
 export async function attempt<T>(fn: () => Promise<T>): Promise<Result<T>> {
   try {
     return { ok: true, data: await fn() };

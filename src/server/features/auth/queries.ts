@@ -2,7 +2,6 @@ import 'server-only';
 import { db } from '@/server/db';
 import { attempt } from '@/server/api/attempt';
 import { ActionError, lookupUser } from '@/server/auth/session';
-import { page } from '@/server/api/helpers';
 
 export const me = () =>
   attempt(async () => {

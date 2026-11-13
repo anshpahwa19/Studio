@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import type { Result } from '@/server/api/attempt';
 
 /** What an endpoint receives: URL parts (p), ?query values (q), the JSON body (b, or {}), the form for uploads, and the raw request. */
-export type Ctx = { p: Record<string, string>; q: URLSearchParams; b: any; form: FormData | null; req: Request };
+type Ctx = { p: Record<string, string>; q: URLSearchParams; b: any; form: FormData | null; req: Request };
 
 /** Most endpoints answer with a Result; downloads (CSV, bill files) answer with a Response. */
 type Handler = (c: Ctx) => Promise<Result<any> | Response>;

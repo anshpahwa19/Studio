@@ -57,7 +57,7 @@ function lanes(list: Appt[]) {
   return out;
 }
 
-export type Draft = { customerId: string; staffId: string; date: string; startTime: string; serviceIds: string[]; branchId: string; walkIn: boolean; notes: string };
+type Draft = { customerId: string; staffId: string; date: string; startTime: string; serviceIds: string[]; branchId: string; walkIn: boolean; notes: string };
 
 export function Planner(p: Props) {
   const router = useRouter();

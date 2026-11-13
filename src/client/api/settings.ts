@@ -1,4 +1,4 @@
-import { call, type DataOf } from '@/client/api/call';
+import { call } from '@/client/api/call';
 import type * as s from '@/server/features/settings/service';
 export type { SettingsInput } from '@/server/features/settings/service';
 

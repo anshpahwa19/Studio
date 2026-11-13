@@ -11,7 +11,7 @@ export const phone = z.string().trim().refine(validPhone, 'enter a valid phone n
 export const phoneOrBlank = z.string().trim().refine((p) => p === '' || validPhone(p), 'enter a valid phone number (10 digits, numbers only)');
 export const optionalPhone = z.string().trim().optional().nullable()
   .refine((p) => !p || validPhone(p), 'enter a valid phone number (10 digits, numbers only)').transform((p) => (p ? p : null));
-export const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 export const optionalGstin = z.string().trim().toUpperCase().optional().nullable()
   .refine((g) => !g || GSTIN_RE.test(g), 'should be 15 characters, like 06ABCDE1234F1Z5').transform((g) => (g ? g : null));
 /** HTML attributes that make a phone field show a number keypad and reject letters before saving. */

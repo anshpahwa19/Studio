@@ -1,4 +1,4 @@
-import { call, type DataOf } from '@/client/api/call';
+import { call } from '@/client/api/call';
 import type * as s from '@/server/features/suppliers/service';
 export type { SupplierInput } from '@/server/features/suppliers/service';
 

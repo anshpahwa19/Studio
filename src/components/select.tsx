@@ -21,7 +21,7 @@ function readOptions(children: ReactNode): Option[] {
   return out;
 }
 
-export type SelectProps = {
+type SelectProps = {
   children: ReactNode;
   value?: string | number;
   defaultValue?: string | number;

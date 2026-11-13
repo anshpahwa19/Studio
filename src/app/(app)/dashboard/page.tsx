@@ -5,7 +5,7 @@ import type { dashboard } from '@/server/features/dashboard/queries';
 import type { DataOf } from '@/client/api/call';
 import { requirePage } from '@/server/auth/session';
 import { canView } from '@/lib/roles';
-import { addDays, fmtDate, fmtDateTime, fmtTime, isoDate, money0, plural, toMinutes } from '@/lib/format';
+import { fmtDate, fmtDateTime, fmtTime, isoDate, money0, plural, toMinutes } from '@/lib/format';
 import { ApptStatus, Card, Empty, IconTile, Pill, Stat, type IconTone } from '@/components/ui';
 import { SyncButton } from './sync-button';
 

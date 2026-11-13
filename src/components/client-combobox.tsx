@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search, UserPlus } from 'lucide-react';
 import { cx } from './ui';
 
-export type ClientOption = { id: string; name: string; phone: string };
+type ClientOption = { id: string; name: string; phone: string };
 
 const initials = (n: string) => n.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 const digits = (s: string) => s.replace(/\D/g, '');

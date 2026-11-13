@@ -136,7 +136,7 @@ export async function requireView(area: Area): Promise<SessionUser> {
   return user;
 }
 
-/** For server actions: throw if not signed in or not allowed to change this area. */
+/** For writes: throw if not signed in or not allowed to change this area. */
 export async function requireEdit(area: Area): Promise<SessionUser> {
   const user = await lookupUser();
   if (!user) throw new ActionError('Your session has ended. Sign in again.', 401);
